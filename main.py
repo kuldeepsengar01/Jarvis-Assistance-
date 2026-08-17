@@ -1,14 +1,9 @@
 import os
 import datetime
-import webbrowser
 
 from dotenv import load_dotenv
 from google import genai
 
-
-# =====================================================
-# ENV
-# =====================================================
 
 load_dotenv()
 
@@ -20,21 +15,16 @@ GEMINI_API_KEY = os.getenv(
 if not GEMINI_API_KEY:
 
     print(
-        "GEMINI_API_KEY is not configured."
+        "GEMINI_API_KEY is missing."
     )
 
-    raise SystemExit
+    raise SystemExit(1)
 
 
-client =
-    genai.Client(
-        api_key=GEMINI_API_KEY
-    )
+client = genai.Client(
+    api_key=GEMINI_API_KEY
+)
 
-
-# =====================================================
-# SPEAK
-# =====================================================
 
 def speak(text):
 
@@ -44,26 +34,16 @@ def speak(text):
     print()
 
 
-# =====================================================
-# GEMINI
-# =====================================================
-
 def ask_gemini(question):
 
     try:
 
-        response =
-            client.models.generate_content(
-                model="gemini-3.6-flash",
-                contents=question
-            )
-
-
-        return (
-            response.text
-            or "No response received."
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=question
         )
 
+        return response.text or "No response received."
 
     except Exception as error:
 
@@ -73,21 +53,15 @@ def ask_gemini(question):
         )
 
         return (
-            "Sorry, Gemini request failed."
+            "Gemini is currently unavailable."
         )
 
 
-# =====================================================
-# COMMAND
-# =====================================================
-
 def process_command(command):
 
-    text =
-        command.strip()
+    text = command.strip()
 
-    lower =
-        text.lower()
+    lower = text.lower()
 
 
     if lower in [
@@ -105,66 +79,12 @@ def process_command(command):
         or "what time" in lower
     ):
 
-        current_time =
-            datetime.datetime.now()
+        now = datetime.datetime.now()
 
         return (
             "The time is "
             +
-            current_time.strftime(
-                "%I:%M %p"
-            )
-        )
-
-
-    if (
-        "open youtube"
-        in lower
-    ):
-
-        webbrowser.open(
-            "https://youtube.com"
-        )
-
-        return (
-            "Opening YouTube."
-        )
-
-
-    if (
-        "open google"
-        in lower
-    ):
-
-        webbrowser.open(
-            "https://google.com"
-        )
-
-        return (
-            "Opening Google."
-        )
-
-
-    if lower.startswith(
-        "search "
-    ):
-
-        query =
-            text[7:].strip()
-
-        webbrowser.open(
-            "https://www.google.com/search?q="
-            +
-            query.replace(
-                " ",
-                "+"
-            )
-        )
-
-        return (
-            "Searching Google for "
-            +
-            query
+            now.strftime("%I:%M %p")
         )
 
 
@@ -173,18 +93,10 @@ def process_command(command):
     )
 
 
-# =====================================================
-# MAIN
-# =====================================================
-
 def main():
 
     speak(
-        "Hello Kuldeep. I am Jarvis."
-    )
-
-    speak(
-        "Type your command."
+        "Hello Kuldeep. Jarvis is online."
     )
 
 
@@ -193,9 +105,7 @@ def main():
         try:
 
             command =
-                input(
-                    "You: "
-                ).strip()
+                input("You: ").strip()
 
 
             if not command:
@@ -233,14 +143,6 @@ def main():
             )
 
             break
-
-
-        except Exception as error:
-
-            print(
-                "Error:",
-                error
-            )
 
 
 if __name__ == "__main__":
