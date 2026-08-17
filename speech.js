@@ -1,20 +1,26 @@
 "use strict";
 
-document.addEventListener("DOMContentLoaded", function () {
+(function () {
 
-    const input = document.getElementById("question");
-    const status = document.getElementById("status");
-    const micButton = document.getElementById("mic");
+    const input =
+        document.getElementById("question");
+
+    const status =
+        document.getElementById("status");
+
+    const micButton =
+        document.getElementById("mic");
+
 
     if (!input || !status || !micButton) {
-        console.error("Jarvis speech UI elements not found.");
+
+        console.error(
+            "Speech UI elements not found."
+        );
+
         return;
     }
 
-
-    // =========================================================
-    // BROWSER SPEECH RECOGNITION
-    // =========================================================
 
     const SpeechRecognition =
         window.SpeechRecognition ||
@@ -23,15 +29,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (!SpeechRecognition) {
 
-        console.error(
-            "SpeechRecognition is not supported in this browser."
-        );
+        micButton.disabled =
+            true;
 
-        micButton.disabled = true;
-        micButton.textContent = "🚫";
+        micButton.textContent =
+            "🚫";
 
         status.textContent =
             "VOICE NOT SUPPORTED";
+
+        console.warn(
+            "SpeechRecognition is not supported."
+        );
 
         return;
     }
@@ -41,65 +50,71 @@ document.addEventListener("DOMContentLoaded", function () {
         new SpeechRecognition();
 
 
-    // =========================================================
-    // SETTINGS
-    // =========================================================
-
-    recognition.lang = "en-IN";
-
-    recognition.continuous = false;
-
-    recognition.interimResults = false;
-
-    recognition.maxAlternatives = 1;
+    recognition.lang =
+        "en-IN";
 
 
-    let listening = false;
+    recognition.continuous =
+        false;
 
 
-    // =========================================================
-    // START
-    // =========================================================
-
-    recognition.onstart = function () {
-
-        listening = true;
-
-        micButton.classList.add("listening");
-
-        micButton.textContent = "🛑";
-
-        status.textContent =
-            "🎤 LISTENING...";
-
-        console.log(
-            "Jarvis microphone started."
-        );
-    };
+    recognition.interimResults =
+        false;
 
 
-    // =========================================================
-    // RESULT
-    // =========================================================
+    recognition.maxAlternatives =
+        1;
 
-    recognition.onresult = function (event) {
 
-        try {
+    let listening =
+        false;
+
+
+    recognition.onstart =
+        function () {
+
+            listening =
+                true;
+
+
+            micButton.classList.add(
+                "listening"
+            );
+
+
+            micButton.textContent =
+                "🛑";
+
+
+            status.textContent =
+                "🎤 LISTENING...";
+        };
+
+
+    recognition.onresult =
+        function (event) {
 
             const result =
                 event.results[0];
 
+
             if (!result) {
+
+                status.textContent =
+                    "NO SPEECH";
+
                 return;
             }
 
 
             const transcript =
-                result[0].transcript.trim();
+                result[0]
+                    .transcript
+                    .trim();
 
 
             console.log(
-                "Recognized:",
+                "Recognized text:",
                 transcript
             );
 
@@ -113,9 +128,9 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
 
-            // =================================================
+            // =========================================
             // SPEECH -> TEXT
-            // =================================================
+            // =========================================
 
             input.value =
                 transcript;
@@ -125,167 +140,122 @@ document.addEventListener("DOMContentLoaded", function () {
                 "VOICE → TEXT";
 
 
-            // =================================================
+            // =========================================
             // TEXT -> EXISTING JARVIS
-            // =================================================
+            // =========================================
 
-            /*
-                askGemini() already exists inside app.py's
-                HTML page.
+            setTimeout(
+                function () {
 
-                We call it after speech becomes text.
-            */
-
-            if (
-                typeof window.askGemini ===
-                "function"
-            ) {
-
-                setTimeout(
-                    function () {
+                    if (
+                        typeof window.askGemini ===
+                        "function"
+                    ) {
 
                         window.askGemini();
 
-                    },
-                    150
-                );
+                    } else {
 
-            } else {
+                        console.error(
+                            "askGemini function not found."
+                        );
+                    }
 
-                console.error(
-                    "askGemini() function not found."
-                );
-
-                status.textContent =
-                    "JARVIS FUNCTION NOT FOUND";
-            }
+                },
+                150
+            );
+        };
 
 
-        } catch (error) {
+    recognition.onerror =
+        function (event) {
 
             console.error(
-                "Speech result error:",
-                error
+                "Speech recognition error:",
+                event.error
             );
 
-            status.textContent =
-                "VOICE PROCESSING ERROR";
-        }
-    };
+
+            listening =
+                false;
 
 
-    // =========================================================
-    // ERROR
-    // =========================================================
-
-    recognition.onerror = function (event) {
-
-        console.error(
-            "Speech recognition error:",
-            event.error
-        );
+            micButton.classList.remove(
+                "listening"
+            );
 
 
-        listening = false;
-
-        micButton.classList.remove(
-            "listening"
-        );
-
-        micButton.textContent =
-            "🎤";
+            micButton.textContent =
+                "🎤";
 
 
-        switch (event.error) {
-
-            case "not-allowed":
+            if (
+                event.error ===
+                "not-allowed"
+            ) {
 
                 status.textContent =
                     "MIC PERMISSION DENIED";
 
-                break;
-
-
-            case "no-speech":
+            } else if (
+                event.error ===
+                "no-speech"
+            ) {
 
                 status.textContent =
                     "NO SPEECH DETECTED";
 
-                break;
-
-
-            case "audio-capture":
+            } else if (
+                event.error ===
+                "audio-capture"
+            ) {
 
                 status.textContent =
                     "MICROPHONE NOT FOUND";
 
-                break;
-
-
-            case "network":
-
-                status.textContent =
-                    "SPEECH NETWORK ERROR";
-
-                break;
-
-
-            case "service-not-allowed":
+            } else if (
+                event.error ===
+                "network"
+            ) {
 
                 status.textContent =
-                    "SPEECH SERVICE BLOCKED";
+                    "SPEECH SERVICE NETWORK ERROR";
 
-                break;
-
-
-            case "aborted":
+            } else {
 
                 status.textContent =
-                    "VOICE STOPPED";
+                    "VOICE ERROR: " +
+                    event.error;
+            }
+        };
 
-                break;
+
+    recognition.onend =
+        function () {
+
+            listening =
+                false;
 
 
-            default:
+            micButton.classList.remove(
+                "listening"
+            );
+
+
+            micButton.textContent =
+                "🎤";
+
+
+            if (
+                status.textContent ===
+                "🎤 LISTENING..."
+            ) {
 
                 status.textContent =
-                    "VOICE ERROR";
-        }
-    };
+                    "● ONLINE";
+            }
+        };
 
-
-    // =========================================================
-    // END
-    // =========================================================
-
-    recognition.onend = function () {
-
-        listening = false;
-
-        micButton.classList.remove(
-            "listening"
-        );
-
-        micButton.textContent =
-            "🎤";
-
-
-        if (
-            status.textContent ===
-                "🎤 LISTENING..." ||
-            status.textContent ===
-                "VOICE → TEXT"
-        ) {
-
-            status.textContent =
-                "● ONLINE";
-        }
-    };
-
-
-    // =========================================================
-    // MICROPHONE BUTTON
-    // =========================================================
 
     function startListening() {
 
@@ -312,11 +282,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
         } catch (error) {
 
-            /*
-                Some browsers throw an error when
-                start() is called twice very quickly.
-            */
-
             console.error(
                 "Speech start error:",
                 error
@@ -325,16 +290,8 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    // =========================================================
-    // GLOBAL FUNCTION
-    // =========================================================
-
     window.startListening =
         startListening;
 
 
-    console.log(
-        "Jarvis speech recognition ready."
-    );
-
-});
+})();
