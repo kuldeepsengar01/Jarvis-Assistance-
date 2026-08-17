@@ -1,3 +1,5 @@
+"use strict";
+
 const input = document.getElementById("question");
 const chat = document.getElementById("chat");
 const status = document.getElementById("status");
@@ -9,16 +11,21 @@ let isListening = false;
 
 
 // =====================================================
-// CHAT MESSAGE
+// MESSAGE
 // =====================================================
 
 function addMessage(sender, text, type) {
 
+    if (!chat) {
+        console.error("Chat element not found.");
+        return;
+    }
+
     const row = document.createElement("div");
-    row.className = `message-row ${type}`;
+    row.className = "message-row " + type;
 
     const box = document.createElement("div");
-    box.className = `message ${type}`;
+    box.className = "message " + type;
 
     const senderElement = document.createElement("div");
     senderElement.className = "sender";
@@ -38,29 +45,50 @@ function addMessage(sender, text, type) {
 
 
 // =====================================================
+// STATUS
+// =====================================================
+
+function setStatus(text) {
+
+    if (status) {
+        status.textContent = text;
+    }
+}
+
+
+// =====================================================
 // TEXT TO SPEECH
 // =====================================================
 
 function speak(text) {
 
     if (!("speechSynthesis" in window)) {
+        console.warn("Speech synthesis not supported.");
+        return;
+    }
+
+    if (!text) {
         return;
     }
 
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance =
+        new SpeechSynthesisUtterance(text);
 
     utterance.lang = "en-IN";
     utterance.rate = 1;
     utterance.pitch = 1;
+    utterance.volume = 1;
 
-    window.speechSynthesis.speak(utterance);
+    window.speechSynthesis.speak(
+        utterance
+    );
 }
 
 
 // =====================================================
-// SPEECH RECOGNITION
+// BROWSER SPEECH RECOGNITION
 // =====================================================
 
 const SpeechRecognition =
@@ -68,39 +96,130 @@ const SpeechRecognition =
     window.webkitSpeechRecognition;
 
 
-if (SpeechRecognition) {
+if (!SpeechRecognition) {
 
-    recognition = new SpeechRecognition();
+    console.error(
+        "SpeechRecognition is not supported by this browser."
+    );
+
+    if (micButton) {
+        micButton.disabled = true;
+        micButton.textContent = "🚫";
+    }
+
+    setStatus(
+        "VOICE NOT SUPPORTED"
+    );
+
+} else {
+
+    recognition =
+        new SpeechRecognition();
 
     recognition.lang = "en-IN";
+
     recognition.continuous = false;
+
     recognition.interimResults = false;
+
     recognition.maxAlternatives = 1;
 
+
+    // =================================================
+    // START
+    // =================================================
 
     recognition.onstart = function () {
 
         isListening = true;
 
-        micButton.classList.add("listening");
-        micButton.textContent = "🛑";
+        if (micButton) {
 
-        status.textContent = "🎤 LISTENING...";
+            micButton.disabled = false;
+
+            micButton.classList.add(
+                "listening"
+            );
+
+            micButton.textContent = "🛑";
+        }
+
+        setStatus(
+            "🎤 LISTENING..."
+        );
     };
 
+
+    // =================================================
+    // RESULT
+    // =================================================
 
     recognition.onresult = function (event) {
 
-        const transcript =
-            event.results[0][0].transcript;
+        try {
 
-        input.value = transcript;
+            const result =
+                event.results[0];
 
-        status.textContent = "VOICE RECEIVED";
+            const transcript =
+                result[0].transcript.trim();
 
-        askGemini();
+            console.log(
+                "Voice result:",
+                transcript
+            );
+
+
+            if (!transcript) {
+
+                setStatus(
+                    "NO SPEECH DETECTED"
+                );
+
+                return;
+            }
+
+
+            input.value = transcript;
+
+            setStatus(
+                "VOICE RECEIVED"
+            );
+
+
+            // Automatically send to Gemini
+            if (
+                typeof window.askGemini ===
+                "function"
+            ) {
+
+                window.askGemini();
+
+            } else {
+
+                console.error(
+                    "askGemini() is not available."
+                );
+
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Result processing error:",
+                error
+            );
+
+            setStatus(
+                "VOICE RESULT ERROR"
+            );
+        }
     };
 
+
+    // =================================================
+    // ERROR
+    // =================================================
 
     recognition.onerror = function (event) {
 
@@ -109,70 +228,146 @@ if (SpeechRecognition) {
             event.error
         );
 
+
         isListening = false;
 
-        micButton.classList.remove("listening");
-        micButton.textContent = "🎤";
 
-        if (event.error === "not-allowed") {
+        if (micButton) {
 
-            status.textContent =
-                "MICROPHONE PERMISSION DENIED";
+            micButton.classList.remove(
+                "listening"
+            );
 
-        } else if (event.error === "no-speech") {
+            micButton.textContent = "🎤";
+        }
 
-            status.textContent =
-                "NO SPEECH DETECTED";
 
-        } else {
+        switch (event.error) {
 
-            status.textContent =
-                "VOICE ERROR: " + event.error;
+            case "not-allowed":
+
+                setStatus(
+                    "MICROPHONE PERMISSION DENIED"
+                );
+
+                addMessage(
+                    "JARVIS",
+                    "Microphone permission was denied. Allow microphone access for this website and try again.",
+                    "ai"
+                );
+
+                break;
+
+
+            case "audio-capture":
+
+                setStatus(
+                    "NO MICROPHONE FOUND"
+                );
+
+                addMessage(
+                    "JARVIS",
+                    "No microphone was detected by the browser.",
+                    "ai"
+                );
+
+                break;
+
+
+            case "no-speech":
+
+                setStatus(
+                    "NO SPEECH DETECTED"
+                );
+
+                break;
+
+
+            case "network":
+
+                setStatus(
+                    "VOICE NETWORK ERROR"
+                );
+
+                addMessage(
+                    "JARVIS",
+                    "Speech recognition could not connect to the browser's recognition service.",
+                    "ai"
+                );
+
+                break;
+
+
+            case "language-not-supported":
+
+                setStatus(
+                    "LANGUAGE NOT SUPPORTED"
+                );
+
+                break;
+
+
+            case "aborted":
+
+                setStatus(
+                    "VOICE STOPPED"
+                );
+
+                break;
+
+
+            default:
+
+                setStatus(
+                    "VOICE ERROR: " +
+                    event.error
+                );
         }
     };
 
+
+    // =================================================
+    // END
+    // =================================================
 
     recognition.onend = function () {
 
         isListening = false;
 
-        micButton.classList.remove("listening");
-        micButton.textContent = "🎤";
+        if (micButton) {
+
+            micButton.classList.remove(
+                "listening"
+            );
+
+            micButton.textContent = "🎤";
+        }
 
         if (
+            status &&
             status.textContent ===
             "🎤 LISTENING..."
         ) {
 
-            status.textContent =
-                "SECURE • AI ONLINE • READY";
+            setStatus(
+                "● ONLINE"
+            );
         }
     };
-
-} else {
-
-    console.warn(
-        "Speech Recognition is not supported."
-    );
-
-    micButton.disabled = true;
-    micButton.textContent = "🚫";
-
-    status.textContent = "VOICE NOT SUPPORTED";
 }
 
 
 // =====================================================
-// START / STOP MICROPHONE
+// MICROPHONE
 // =====================================================
 
-function startListening() {
+async function startListening() {
 
     if (!recognition) {
 
         addMessage(
             "JARVIS",
-            "Speech recognition is not supported. Try Chrome or Edge.",
+            "Speech recognition is not supported in this browser. Try Chrome or another supported browser.",
             "ai"
         );
 
@@ -188,222 +383,108 @@ function startListening() {
     }
 
 
+    // Check secure context.
+    // Render is HTTPS, so this should normally be true.
+
+    if (!window.isSecureContext) {
+
+        addMessage(
+            "JARVIS",
+            "Microphone requires a secure HTTPS connection.",
+            "ai"
+        );
+
+        return;
+    }
+
+
+    // Ask for microphone permission first.
+
+    if (
+        navigator.mediaDevices &&
+        navigator.mediaDevices.getUserMedia
+    ) {
+
+        try {
+
+            const stream =
+                await navigator.mediaDevices.getUserMedia({
+                    audio: true
+                });
+
+
+            // We only needed permission.
+            // SpeechRecognition will manage the microphone.
+
+            stream.getTracks().forEach(
+                function (track) {
+                    track.stop();
+                }
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "Microphone permission error:",
+                error
+            );
+
+            setStatus(
+                "MICROPHONE PERMISSION DENIED"
+            );
+
+            addMessage(
+                "JARVIS",
+                "Please allow microphone access in your browser settings.",
+                "ai"
+            );
+
+            return;
+        }
+    }
+
+
     try {
+
+        setStatus(
+            "STARTING MICROPHONE..."
+        );
 
         recognition.start();
 
     } catch (error) {
 
         console.error(
-            "Speech start error:",
+            "Recognition start error:",
             error
         );
 
-    }
-}
-
-
-// =====================================================
-// ASK GEMINI
-// =====================================================
-
-async function askGemini() {
-
-    const question = input.value.trim();
-
-
-    if (!question) {
-
-        input.focus();
-
-        return;
-    }
-
-
-    addMessage(
-        "YOU",
-        question,
-        "user"
-    );
-
-
-    input.value = "";
-
-    sendButton.disabled = true;
-    micButton.disabled = true;
-
-    status.textContent =
-        "🧠 JARVIS IS THINKING...";
-
-
-    try {
-
-        const response = await fetch(
-            "/ask",
-            {
-                method: "POST",
-
-                headers: {
-                    "Content-Type": "application/json",
-                    "Accept": "application/json"
-                },
-
-                body: JSON.stringify({
-                    question: question
-                })
-            }
-        );
-
-
-        // ---------------------------------------------
-        // SAFE RESPONSE PARSING
-        // ---------------------------------------------
-
-        const contentType =
-            response.headers.get("content-type") || "";
-
-        const raw =
-            await response.text();
-
-
-        let data;
-
+        // Browser may throw InvalidStateError
+        // if recognition is already running.
 
         if (
-            contentType.includes(
-                "application/json"
-            )
+            error.name !==
+            "InvalidStateError"
         ) {
 
-            try {
-
-                data = JSON.parse(raw);
-
-            } catch (parseError) {
-
-                throw new Error(
-                    "Server returned invalid JSON."
-                );
-            }
-
-        } else {
-
-            // Render/Flask returned HTML or plain text
-
-            console.error(
-                "Non-JSON server response:",
-                raw
+            addMessage(
+                "JARVIS",
+                "Could not start speech recognition.",
+                "ai"
             );
 
-            throw new Error(
-                `Server returned ${response.status}: ${raw.slice(0, 300)}`
-            );
         }
-
-
-        // ---------------------------------------------
-        // HTTP ERROR
-        // ---------------------------------------------
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.error ||
-                data.message ||
-                `HTTP ${response.status}`
-            );
-        }
-
-
-        // ---------------------------------------------
-        // APPLICATION ERROR
-        // ---------------------------------------------
-
-        if (!data.success) {
-
-            throw new Error(
-                data.error ||
-                data.message ||
-                "Gemini request failed"
-            );
-        }
-
-
-        // ---------------------------------------------
-        // SUCCESS
-        // ---------------------------------------------
-
-        addMessage(
-            "JARVIS",
-            data.answer || "No answer received.",
-            "ai"
-        );
-
-
-        speak(
-            data.answer || ""
-        );
-
-
-        status.textContent =
-            "● ONLINE";
-
-
-    } catch (error) {
-
-        console.error(
-            "ASK ERROR:",
-            error
-        );
-
-
-        addMessage(
-            "JARVIS ERROR",
-            error.message ||
-            "Unable to connect to Jarvis.",
-            "ai"
-        );
-
-
-        status.textContent =
-            "⚠ REQUEST FAILED";
-
-
-    } finally {
-
-        sendButton.disabled = false;
-
-        micButton.disabled =
-            !recognition;
-
-        input.focus();
     }
 }
-
-
-// =====================================================
-// ENTER KEY
-// =====================================================
-
-input.addEventListener(
-    "keydown",
-    function (event) {
-
-        if (
-            event.key === "Enter"
-        ) {
-
-            event.preventDefault();
-
-            askGemini();
-        }
-    }
-);
 
 
 // =====================================================
 // GLOBAL
 // =====================================================
 
-window.askGemini = askGemini;
-window.startListening = startListening;
+window.startListening =
+    startListening;
+
+window.speak =
+    speak;
