@@ -1,9 +1,15 @@
 import os
+import time
 from pathlib import Path
 
 import requests
-from flask import Flask, jsonify, request, render_template_string, Response
 from dotenv import load_dotenv
+from flask import Flask, jsonify, request, render_template_string, Response
+
+
+# =========================================================
+# ENVIRONMENT
+# =========================================================
 
 load_dotenv()
 
@@ -12,180 +18,641 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 app = Flask(__name__)
 
 
+# =========================================================
+# HTML UI
+# =========================================================
+
 HTML = """
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="theme-color"
+        content="#020617"
+    >
+
     <title>Kuldeep AI</title>
 
     <style>
+
         * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            margin: 0;
             min-height: 100vh;
-            font-family: Arial, sans-serif;
-            color: white;
-            background: #020617;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            color: #ffffff;
+
+            background:
+                radial-gradient(
+                    circle at 15% 10%,
+                    rgba(0, 200, 255, 0.15),
+                    transparent 30%
+                ),
+                radial-gradient(
+                    circle at 85% 20%,
+                    rgba(80, 80, 255, 0.12),
+                    transparent 30%
+                ),
+                linear-gradient(
+                    135deg,
+                    #02040b,
+                    #061321,
+                    #02050d
+                );
         }
 
         .app {
-            width: min(900px, 100%);
-            height: 100vh;
-            max-height: 900px;
+            min-height: 100vh;
+
+            padding: 18px;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .shell {
+            width: min(1050px, 100%);
+            height: min(900px, 94vh);
+
             display: flex;
             flex-direction: column;
-            background: #07111f;
+
+            overflow: hidden;
+
+            border:
+                1px solid
+                rgba(91, 211, 255, 0.15);
+
+            border-radius: 28px;
+
+            background:
+                rgba(7, 15, 31, 0.94);
+
+            box-shadow:
+                0 30px 90px rgba(0, 0, 0, 0.55),
+                0 0 100px rgba(40, 210, 255, 0.06);
+
+            backdrop-filter: blur(18px);
         }
 
         .header {
-            padding: 18px;
-            text-align: center;
-            border-bottom: 1px solid #17324b;
+            min-height: 72px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 14px 20px;
+
+            border-bottom:
+                1px solid
+                rgba(255, 255, 255, 0.06);
         }
 
-        .header h1 {
-            margin: 0;
-            color: #55ddff;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 44px;
+            height: 44px;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 14px;
+
+            background:
+                radial-gradient(
+                    circle,
+                    #efffff,
+                    #4ce0ff 30%,
+                    #08759b 55%,
+                    #061121 76%
+                );
+
+            color: #00151b;
+            font-size: 19px;
+            font-weight: bold;
+
+            box-shadow:
+                0 0 30px
+                rgba(64, 220, 255, 0.35);
+        }
+
+        .brand h1 {
+            font-size: 21px;
             letter-spacing: 3px;
         }
 
-        .header p {
-            margin: 5px 0 0;
-            color: #7890a8;
-            font-size: 12px;
+        .brand p {
+            margin-top: 3px;
+
+            color: #7892aa;
+
+            font-size: 9px;
+            letter-spacing: 1.5px;
+        }
+
+        .online {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+
+            padding: 7px 11px;
+
+            border-radius: 999px;
+
+            color: #68efa9;
+
+            background:
+                rgba(66, 255, 170, 0.07);
+
+            font-size: 10px;
+        }
+
+        .online-dot {
+            width: 7px;
+            height: 7px;
+
+            border-radius: 50%;
+
+            background: #52ee9f;
+
+            box-shadow:
+                0 0 12px #52ee9f;
+        }
+
+        .hero {
+            display: grid;
+            place-items: center;
+
+            padding: 18px 10px 12px;
+        }
+
+        .orb {
+            width: 92px;
+            height: 92px;
+
+            position: relative;
+
+            display: grid;
+            place-items: center;
+
+            border-radius: 50%;
+
+            background:
+                radial-gradient(
+                    circle at 35% 30%,
+                    #f2ffff,
+                    #56e7ff 18%,
+                    #08739d 48%,
+                    #061321 74%
+                );
+
+            box-shadow:
+                0 0 40px
+                rgba(56, 217, 255, 0.42),
+
+                0 0 100px
+                rgba(56, 217, 255, 0.10);
+
+            animation:
+                pulse 3s ease-in-out infinite;
+        }
+
+        .orb::before {
+            content: "";
+
+            position: absolute;
+            inset: -11px;
+
+            border:
+                1px solid
+                rgba(90, 225, 255, 0.34);
+
+            border-right-color:
+                rgba(90, 225, 255, 0.72);
+
+            border-radius: 50%;
+
+            animation:
+                spin 8s linear infinite;
+        }
+
+        .orb::after {
+            content: "";
+
+            position: absolute;
+            inset: -19px;
+
+            border:
+                1px solid
+                rgba(90, 225, 255, 0.08);
+
+            border-left-color:
+                rgba(90, 225, 255, 0.50);
+
+            border-radius: 50%;
+
+            animation:
+                spinReverse 11s linear infinite;
+        }
+
+        .orb-core {
+            width: 22px;
+            height: 22px;
+
+            border-radius: 50%;
+
+            background: #ffffff;
+
+            box-shadow:
+                0 0 28px #ffffff;
+        }
+
+        .hero-title {
+            margin-top: 12px;
+
+            color: #64ddff;
+
+            font-size: 11px;
+            letter-spacing: 2.5px;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes spin {
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes spinReverse {
+
+            to {
+                transform: rotate(-360deg);
+            }
         }
 
         .chat {
             flex: 1;
+
             overflow-y: auto;
-            padding: 18px;
+
+            padding:
+                8px
+                20px
+                18px;
+
+            scroll-behavior: smooth;
         }
 
-        .row {
+        .chat::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .chat::-webkit-scrollbar-thumb {
+            background: #17334c;
+            border-radius: 999px;
+        }
+
+        .message-row {
             display: flex;
-            margin: 10px 0;
+            margin: 9px 0;
         }
 
-        .row.user {
+        .message-row.user {
             justify-content: flex-end;
         }
 
-        .row.ai {
+        .message-row.ai {
             justify-content: flex-start;
         }
 
         .message {
-            max-width: 85%;
-            padding: 12px 15px;
-            border-radius: 16px;
+            max-width: 82%;
+
+            padding:
+                12px 14px;
+
+            border-radius: 17px;
+
+            font-size: 14px;
             line-height: 1.6;
+
             white-space: pre-wrap;
             word-break: break-word;
         }
 
         .message.user {
-            background: #0e5c7d;
+            background:
+                linear-gradient(
+                    135deg,
+                    #0a5b7a,
+                    #123957
+                );
+
+            border-bottom-right-radius: 5px;
         }
 
         .message.ai {
-            background: #122238;
-            border: 1px solid #1c3b57;
+            background:
+                rgba(17, 30, 54, 0.90);
+
+            border:
+                1px solid
+                rgba(100, 220, 255, 0.08);
+
+            border-bottom-left-radius: 5px;
         }
 
         .sender {
-            font-size: 10px;
-            color: #86a0b7;
             margin-bottom: 5px;
+
+            color: #7995ad;
+
+            font-size: 9px;
+
             letter-spacing: 1px;
         }
 
         .quick {
             display: flex;
+
             gap: 8px;
+
             overflow-x: auto;
-            padding: 0 15px 10px;
+
+            padding:
+                0 20px
+                11px;
+        }
+
+        .quick::-webkit-scrollbar {
+            display: none;
         }
 
         .quick button {
-            flex: 0 0 auto;
-            border: 1px solid #21445f;
-            background: #0b1b2d;
-            color: #d5f4ff;
-            padding: 9px 13px;
+            flex:
+                0 0 auto;
+
+            padding:
+                9px 13px;
+
+            border:
+                1px solid
+                rgba(
+                    85,
+                    215,
+                    255,
+                    0.11
+                );
+
             border-radius: 999px;
+
+            color: #c9efff;
+
+            background:
+                rgba(
+                    14,
+                    29,
+                    53,
+                    0.80
+                );
+
             cursor: pointer;
         }
 
         .composer {
-            padding: 12px;
-            border-top: 1px solid #17324b;
+            padding:
+                12px
+                16px
+                15px;
+
+            border-top:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.06
+                );
+
+            background:
+                rgba(
+                    2,
+                    8,
+                    18,
+                    0.86
+                );
         }
 
-        .input-box {
+        .input-wrap {
             display: flex;
-            gap: 8px;
+
+            align-items: center;
+
+            gap: 7px;
+
+            padding: 6px;
+
+            border:
+                1px solid
+                rgba(
+                    82,
+                    213,
+                    255,
+                    0.14
+                );
+
+            border-radius: 18px;
+
+            background:
+                rgba(
+                    11,
+                    22,
+                    40,
+                    0.96
+                );
         }
 
-        input {
+        .input-wrap input {
             flex: 1;
+
             min-width: 0;
-            border: 1px solid #21445f;
+
+            padding:
+                12px 10px;
+
+            border: none;
             outline: none;
-            background: #0a1828;
+
+            background: transparent;
+
             color: white;
-            padding: 13px;
-            border-radius: 12px;
+
             font-size: 15px;
         }
 
-        button {
-            font-family: inherit;
+        .input-wrap input::placeholder {
+            color: #58718a;
         }
 
-        #mic,
-        #send {
+        .mic,
+        .send {
+            flex: 0 0 auto;
+
             border: none;
-            border-radius: 12px;
+
             cursor: pointer;
         }
 
-        #mic {
-            width: 48px;
-            background: #19344c;
+        .mic {
+            width: 44px;
+            height: 44px;
+
+            border-radius: 13px;
+
             color: white;
+
+            background:
+                rgba(
+                    34,
+                    55,
+                    81,
+                    0.90
+                );
+
             font-size: 18px;
         }
 
-        #mic.listening {
+        .mic.listening {
             background: #ef4444;
+
+            box-shadow:
+                0 0 24px
+                rgba(
+                    239,
+                    68,
+                    68,
+                    0.42
+                );
         }
 
-        #send {
-            min-width: 70px;
-            background: #43d9ff;
-            color: #00121a;
-            font-weight: bold;
+        .mic:disabled,
+        .send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .send {
+            min-width: 72px;
+            height: 44px;
+
+            padding: 0 14px;
+
+            border-radius: 13px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #9cf4ff,
+                    #2bc9ef
+                );
+
+            color: #00131a;
+
+            font-weight: 800;
         }
 
         .status {
-            text-align: center;
             margin-top: 7px;
-            color: #69839b;
-            font-size: 11px;
+
+            text-align: center;
+
+            color: #536f87;
+
+            font-size: 9px;
+            letter-spacing: 1px;
         }
 
-        @media (max-width: 600px) {
+        @media (max-width: 700px) {
+
             .app {
+                padding: 0;
+            }
+
+            .shell {
                 width: 100%;
                 height: 100svh;
+
+                border: none;
+                border-radius: 0;
+            }
+
+            .header {
+                padding: 13px 14px;
+            }
+
+            .brand h1 {
+                font-size: 17px;
+            }
+
+            .brand p {
+                font-size: 8px;
+            }
+
+            .logo {
+                width: 40px;
+                height: 40px;
+            }
+
+            .orb {
+                width: 82px;
+                height: 82px;
+            }
+
+            .orb-core {
+                width: 20px;
+                height: 20px;
+            }
+
+            .chat {
+                padding:
+                    8px 14px 15px;
             }
 
             .message {
@@ -193,173 +660,369 @@ HTML = """
                 font-size: 13px;
             }
 
-            input {
+            .quick {
+                padding:
+                    0 14px 10px;
+            }
+
+            .composer {
+                padding: 10px;
+            }
+
+            .input-wrap input {
                 font-size: 14px;
             }
+
+            .send {
+                min-width: 60px;
+            }
         }
+
     </style>
+
 </head>
+
 
 <body>
 
 <div class="app">
 
-    <header class="header">
-        <h1>KULDEEP AI</h1>
-        <p>JARVIS • GEMINI ASSISTANT</p>
-    </header>
+    <main class="shell">
 
-    <main class="chat" id="chat">
 
-        <div class="row ai">
-            <div class="message ai">
-                <div class="sender">JARVIS</div>
-                Hello Kuldeep 👋 Ask me anything.
+        <header class="header">
+
+            <div class="brand">
+
+                <div class="logo">
+                    ◉
+                </div>
+
+                <div>
+
+                    <h1>KULDEEP AI</h1>
+
+                    <p>
+                        GEMINI INTELLIGENCE
+                    </p>
+
+                </div>
+
             </div>
+
+
+            <div class="online">
+
+                <span class="online-dot"></span>
+
+                ONLINE
+
+            </div>
+
+        </header>
+
+
+        <section class="hero">
+
+            <div class="orb">
+
+                <div class="orb-core"></div>
+
+            </div>
+
+            <div class="hero-title">
+                JARVIS IS READY
+            </div>
+
+        </section>
+
+
+        <section
+            class="chat"
+            id="chat"
+        >
+
+            <div class="message-row ai">
+
+                <div class="message ai">
+
+                    <div class="sender">
+                        JARVIS
+                    </div>
+
+                    Hello Kuldeep 👋
+                    Ask me anything.
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <div class="quick">
+
+            <button
+                type="button"
+                onclick="quickAsk('What is Python?')"
+            >
+                🐍 Python
+            </button>
+
+            <button
+                type="button"
+                onclick="quickAsk('Explain Artificial Intelligence')"
+            >
+                🤖 AI
+            </button>
+
+            <button
+                type="button"
+                onclick="quickAsk('What is React?')"
+            >
+                ⚛ React
+            </button>
+
+            <button
+                type="button"
+                onclick="quickAsk('Explain JavaScript')"
+            >
+                JS
+            </button>
+
+            <button
+                type="button"
+                onclick="quickAsk('Give me a programming tip')"
+            >
+                💡 Tip
+            </button>
+
         </div>
+
+
+        <footer class="composer">
+
+            <div class="input-wrap">
+
+                <input
+                    id="question"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Ask Jarvis anything..."
+                >
+
+                <button
+                    id="mic"
+                    class="mic"
+                    type="button"
+                    onclick="startListening()"
+                    aria-label="Start voice input"
+                >
+                    🎤
+                </button>
+
+                <button
+                    id="send"
+                    class="send"
+                    type="button"
+                    onclick="askGemini()"
+                >
+                    ASK
+                </button>
+
+            </div>
+
+
+            <div
+                id="status"
+                class="status"
+            >
+                ● SECURE • AI ONLINE • READY
+            </div>
+
+        </footer>
 
     </main>
-
-    <div class="quick">
-
-        <button onclick="quickAsk('What is Python?')">
-            Python
-        </button>
-
-        <button onclick="quickAsk('Explain AI simply')">
-            AI
-        </button>
-
-        <button onclick="quickAsk('What is React?')">
-            React
-        </button>
-
-        <button onclick="quickAsk('Give me a coding tip')">
-            Coding Tip
-        </button>
-
-    </div>
-
-    <footer class="composer">
-
-        <div class="input-box">
-
-            <input
-                id="question"
-                type="text"
-                placeholder="Ask Jarvis..."
-                autocomplete="off"
-            >
-
-            <button
-                id="mic"
-                onclick="startListening()"
-            >
-                🎤
-            </button>
-
-            <button
-                id="send"
-                onclick="askGemini()"
-            >
-                ASK
-            </button>
-
-        </div>
-
-        <div id="status" class="status">
-            ● ONLINE
-        </div>
-
-    </footer>
 
 </div>
 
 
 <script>
-const input = document.getElementById("question");
-const chat = document.getElementById("chat");
-const status = document.getElementById("status");
-const mic = document.getElementById("mic");
-const send = document.getElementById("send");
+
+const input =
+    document.getElementById("question");
+
+const chat =
+    document.getElementById("chat");
+
+const status =
+    document.getElementById("status");
+
+const sendButton =
+    document.getElementById("send");
+
+const micButton =
+    document.getElementById("mic");
 
 
-function addMessage(sender, text, type) {
+function addMessage(
+    sender,
+    text,
+    type
+) {
 
-    const row = document.createElement("div");
-    row.className = "row " + type;
+    const row =
+        document.createElement("div");
 
-    const message = document.createElement("div");
-    message.className = "message " + type;
+    row.className =
+        "message-row " + type;
 
-    const senderEl = document.createElement("div");
-    senderEl.className = "sender";
-    senderEl.textContent = sender;
 
-    const content = document.createElement("div");
-    content.textContent = text;
+    const box =
+        document.createElement("div");
 
-    message.appendChild(senderEl);
-    message.appendChild(content);
+    box.className =
+        "message " + type;
 
-    row.appendChild(message);
-    chat.appendChild(row);
 
-    chat.scrollTop = chat.scrollHeight;
+    const senderElement =
+        document.createElement("div");
+
+    senderElement.className =
+        "sender";
+
+    senderElement.textContent =
+        sender;
+
+
+    const content =
+        document.createElement("div");
+
+    content.textContent =
+        text;
+
+
+    box.appendChild(
+        senderElement
+    );
+
+    box.appendChild(
+        content
+    );
+
+
+    row.appendChild(
+        box
+    );
+
+
+    chat.appendChild(
+        row
+    );
+
+
+    chat.scrollTop =
+        chat.scrollHeight;
 }
 
 
 function quickAsk(text) {
-    input.value = text;
+
+    input.value =
+        text;
+
     askGemini();
 }
 
 
 async function askGemini() {
 
-    const question = input.value.trim();
+    const question =
+        input.value.trim();
+
 
     if (!question) {
+
+        input.focus();
+
         return;
     }
 
-    addMessage("YOU", question, "user");
 
-    input.value = "";
+    addMessage(
+        "YOU",
+        question,
+        "user"
+    );
 
-    input.disabled = true;
-    send.disabled = true;
-    mic.disabled = true;
 
-    status.textContent = "● THINKING...";
+    input.value =
+        "";
+
+
+    input.disabled =
+        true;
+
+    sendButton.disabled =
+        true;
+
+    micButton.disabled =
+        true;
+
+
+    status.textContent =
+        "🧠 JARVIS IS THINKING...";
+
 
     try {
 
-        const response = await fetch("/ask", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify({
-                question: question
-            })
-        });
+        const response =
+            await fetch(
+                "/ask",
+                {
+                    method:
+                        "POST",
 
-        const text = await response.text();
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+
+                        "Accept":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            question:
+                                question
+                        })
+                }
+            );
+
+
+        const raw =
+            await response.text();
+
 
         let data;
 
+
         try {
-            data = JSON.parse(text);
+
+            data =
+                JSON.parse(raw);
+
         } catch (error) {
+
             throw new Error(
-                "Invalid server response: HTTP " +
+                "Server returned invalid JSON. HTTP " +
                 response.status
             );
         }
 
+
         if (!data.success) {
+
             throw new Error(
                 data.error ||
                 data.message ||
@@ -367,218 +1030,635 @@ async function askGemini() {
             );
         }
 
+
         addMessage(
             "JARVIS",
-            data.answer,
+            data.answer ||
+                "No answer received.",
             "ai"
         );
 
-        if (typeof window.speakLong === "function") {
-            window.speakLong(data.answer);
+
+        if (
+            typeof window.speakLong ===
+            "function"
+        ) {
+
+            window.speakLong(
+                data.answer || ""
+            );
         }
 
-        status.textContent = "● ONLINE";
+
+        status.textContent =
+            "● ONLINE";
+
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "ASK ERROR:",
+            error
+        );
+
 
         addMessage(
             "JARVIS",
-            error.message,
+            error.message ||
+                "Request failed.",
             "ai"
         );
 
-        status.textContent = "⚠ ERROR";
+
+        status.textContent =
+            "⚠ REQUEST FAILED";
+
 
     } finally {
 
-        input.disabled = false;
-        send.disabled = false;
-        mic.disabled = false;
+        input.disabled =
+            false;
+
+        sendButton.disabled =
+            false;
+
+        micButton.disabled =
+            false;
 
         input.focus();
     }
 }
 
 
-input.addEventListener("keydown", function(event) {
+function speakLong(text) {
 
-    if (event.key === "Enter") {
-        event.preventDefault();
-        askGemini();
+    if (
+        !("speechSynthesis" in window)
+    ) {
+
+        return;
     }
 
-});
+
+    if (!text) {
+
+        return;
+    }
 
 
-window.askGemini = askGemini;
+    window.speechSynthesis.cancel();
+
+
+    const cleaned =
+        text
+            .replace(
+                /```/g,
+                ""
+            )
+            .replace(
+                /[*_#]/g,
+                ""
+            )
+            .trim();
+
+
+    const sentences =
+        cleaned.match(
+            /[^.!?]+[.!?]+|[^.!?]+$/g
+        );
+
+
+    if (!sentences) {
+
+        return;
+    }
+
+
+    const chunks = [];
+
+    let current = "";
+
+
+    for (
+        const sentencePart
+        of sentences
+    ) {
+
+        const sentence =
+            sentencePart.trim();
+
+
+        if (!sentence) {
+
+            continue;
+        }
+
+
+        const combined =
+            (
+                current +
+                " " +
+                sentence
+            ).trim();
+
+
+        if (
+            combined.length >
+            220
+        ) {
+
+            if (current) {
+
+                chunks.push(
+                    current
+                );
+            }
+
+
+            current =
+                sentence;
+
+        } else {
+
+            current =
+                combined;
+        }
+    }
+
+
+    if (current) {
+
+        chunks.push(
+            current
+        );
+    }
+
+
+    let index = 0;
+
+
+    function speakNext() {
+
+        if (
+            index >=
+            chunks.length
+        ) {
+
+            return;
+        }
+
+
+        const utterance =
+            new SpeechSynthesisUtterance(
+                chunks[index]
+            );
+
+
+        utterance.lang =
+            "en-IN";
+
+
+        utterance.rate =
+            0.98;
+
+
+        utterance.pitch =
+            1;
+
+
+        utterance.volume =
+            1;
+
+
+        utterance.onend =
+            function() {
+
+                index += 1;
+
+
+                setTimeout(
+                    speakNext,
+                    80
+                );
+            };
+
+
+        utterance.onerror =
+            function(event) {
+
+                console.error(
+                    "Speech synthesis error:",
+                    event.error
+                );
+            };
+
+
+        window.speechSynthesis.speak(
+            utterance
+        );
+    }
+
+
+    speakNext();
+}
+
+
+window.askGemini =
+    askGemini;
+
+
+window.speakLong =
+    speakLong;
+
+
+input.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Enter"
+        ) {
+
+            event.preventDefault();
+
+            askGemini();
+        }
+    }
+);
+
 </script>
 
+
 <script src="/speech.js"></script>
+
 
 </body>
 </html>
 """
 
 
+# =========================================================
+# HOME
+# =========================================================
+
 @app.get("/")
 def home():
     return render_template_string(HTML)
 
 
-@app.get("/health")
-def health():
-    return jsonify({
-        "status": "ok",
-        "gemini_configured": bool(GEMINI_API_KEY)
-    })
-
+# =========================================================
+# SPEECH.JS
+# =========================================================
 
 @app.get("/speech.js")
 def speech_js():
 
-    path = Path(__file__).resolve().parent / "speech.js"
+    js_path = (
+        Path(__file__).resolve().parent
+        / "speech.js"
+    )
 
-    if not path.exists():
+
+    if not js_path.exists():
+
         return Response(
             "console.error('speech.js not found');",
             status=404,
             mimetype="application/javascript"
         )
 
+
     return Response(
-        path.read_text(encoding="utf-8"),
+        js_path.read_text(
+            encoding="utf-8"
+        ),
         mimetype="application/javascript"
     )
 
 
+# =========================================================
+# HEALTH
+# =========================================================
+
+@app.get("/health")
+def health():
+
+    return jsonify(
+        {
+            "status": "ok",
+            "gemini_configured":
+                bool(GEMINI_API_KEY)
+        }
+    )
+
+
+# =========================================================
+# ASK GET
+# =========================================================
+
+@app.get("/ask")
+def ask_get():
+
+    return jsonify(
+        {
+            "success": True,
+            "message":
+                "Use POST /ask or the web interface."
+        }
+    )
+
+
+# =========================================================
+# ASK POST
+# =========================================================
+
 @app.post("/ask")
 def ask():
 
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(
+        silent=True
+    ) or {}
 
-    question = str(data.get("question", "")).strip()
+
+    question = str(
+        data.get(
+            "question",
+            ""
+        )
+    ).strip()
+
 
     if not question:
-        return jsonify({
-            "success": False,
-            "message": "Question is required."
-        })
+
+        return jsonify(
+            {
+                "success": False,
+                "message":
+                    "Question is required."
+            }
+        )
+
 
     if not GEMINI_API_KEY:
-        return jsonify({
-            "success": False,
-            "message": "GEMINI_API_KEY is not configured."
-        })
 
-    try:
-
-        url = (
-            "https://generativelanguage.googleapis.com/"
-            "v1beta/models/"
-            "gemini-3.6-flash:generateContent"
-        )
-
-        headers = {
-            "x-goog-api-key": GEMINI_API_KEY,
-            "Content-Type": "application/json"
-        }
-
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": question
-                        }
-                    ]
-                }
-            ]
-        }
-
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
-
-        print(
-            "Gemini status:",
-            response.status_code
-        )
-
-        print(
-            "Gemini response:",
-            response.text[:1000]
-        )
-
-        if not response.ok:
-
-            return jsonify({
+        return jsonify(
+            {
                 "success": False,
-                "message": "Gemini API request failed.",
-                "error": response.text,
-                "status_code": response.status_code
-            })
+                "message":
+                    "GEMINI_API_KEY is not configured."
+            }
+        )
 
-        result = response.json()
 
-        candidates = result.get(
+    url_template = (
+        "https://generativelanguage.googleapis.com/"
+        "v1beta/models/{model}:generateContent"
+    )
+
+
+    models = [
+        "gemini-3.6-flash",
+        "gemini-2.5-flash"
+    ]
+
+
+    headers = {
+        "x-goog-api-key":
+            GEMINI_API_KEY,
+
+        "Content-Type":
+            "application/json"
+    }
+
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text":
+                            question
+                    }
+                ]
+            }
+        ]
+    }
+
+
+    last_error = None
+
+
+    for model in models:
+
+        for attempt in range(3):
+
+            try:
+
+                print(
+                    "Gemini model:",
+                    model,
+                    "attempt:",
+                    attempt + 1
+                )
+
+
+                response = requests.post(
+                    url_template.format(
+                        model=model
+                    ),
+                    headers=headers,
+                    json=payload,
+                    timeout=60
+                )
+
+
+                print(
+                    "Gemini HTTP:",
+                    response.status_code
+                )
+
+
+                if response.ok:
+
+                    result =
+                        response.json()
+
+
+                    answer =
+                        extract_gemini_text(
+                            result
+                        )
+
+
+                    if answer:
+
+                        return jsonify(
+                            {
+                                "success":
+                                    True,
+
+                                "question":
+                                    question,
+
+                                "answer":
+                                    answer,
+
+                                "model":
+                                    model
+                            }
+                        )
+
+
+                    last_error =
+                        "Gemini returned an empty response."
+
+                    break
+
+
+                last_error =
+                    response.text
+
+
+                if response.status_code in [
+                    429,
+                    500,
+                    502,
+                    503,
+                    504
+                ]:
+
+                    wait_seconds =
+                        2 ** attempt
+
+
+                    print(
+                        "Temporary Gemini error.",
+                        "Retrying in",
+                        wait_seconds,
+                        "seconds."
+                    )
+
+
+                    time.sleep(
+                        wait_seconds
+                    )
+
+
+                    continue
+
+
+                if response.status_code in [
+                    400,
+                    401,
+                    403,
+                    404
+                ]:
+
+                    break
+
+
+                break
+
+
+            except requests.RequestException as error:
+
+                last_error =
+                    str(error)
+
+
+                wait_seconds =
+                    2 ** attempt
+
+
+                time.sleep(
+                    wait_seconds
+                )
+
+
+            except Exception as error:
+
+                last_error =
+                    str(error)
+
+                break
+
+
+    return jsonify(
+        {
+            "success":
+                False,
+
+            "message":
+                "Gemini is temporarily unavailable.",
+
+            "error":
+                last_error,
+
+            "hint":
+                "The server retried the available models automatically."
+        }
+    )
+
+
+# =========================================================
+# GEMINI TEXT EXTRACTION
+# =========================================================
+
+def extract_gemini_text(result):
+
+    candidates =
+        result.get(
             "candidates",
             []
         )
 
-        answer = ""
 
-        if candidates:
+    if not candidates:
 
-            content = candidates[0].get(
-                "content",
-                {}
+        return ""
+
+
+    content =
+        candidates[0].get(
+            "content",
+            {}
+        )
+
+
+    parts =
+        content.get(
+            "parts",
+            []
+        )
+
+
+    texts = []
+
+
+    for part in parts:
+
+        text =
+            part.get(
+                "text",
+                ""
             )
 
-            parts = content.get(
-                "parts",
-                []
+
+        if text:
+
+            texts.append(
+                text
             )
 
-            for part in parts:
 
-                part_text = part.get(
-                    "text",
-                    ""
-                )
+    return "\n".join(
+        texts
+    ).strip()
 
-                if part_text:
-                    answer += part_text
 
-        if not answer:
-            answer = "Gemini returned no text."
-
-        return jsonify({
-            "success": True,
-            "question": question,
-            "answer": answer
-        })
-
-    except requests.RequestException as error:
-
-        return jsonify({
-            "success": False,
-            "message": "Gemini network error.",
-            "error": str(error)
-        })
-
-    except Exception as error:
-
-        return jsonify({
-            "success": False,
-            "message": "Server error.",
-            "error": str(error)
-        })
-
+# =========================================================
+# RUN
+# =========================================================
 
 if __name__ == "__main__":
 
@@ -588,6 +1668,7 @@ if __name__ == "__main__":
             "5000"
         )
     )
+
 
     app.run(
         host="0.0.0.0",
