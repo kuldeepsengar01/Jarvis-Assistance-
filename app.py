@@ -22,7 +22,7 @@ else:
 
 
 # =========================================================
-# FLASK
+# FLASK APP
 # =========================================================
 
 app = Flask(__name__)
@@ -42,7 +42,7 @@ def home():
 
 
 # =========================================================
-# HEALTH
+# HEALTH CHECK
 # =========================================================
 
 @app.get("/health")
@@ -54,23 +54,29 @@ def health():
 
 
 # =========================================================
-# GEMINI
+# ASK - GET
+# =========================================================
+
+@app.get("/ask")
+def ask_get():
+    return jsonify({
+        "success": True,
+        "message": "Use POST /ask with JSON body: {\"question\": \"Your question\"}"
+    })
+
+
+# =========================================================
+# ASK - POST
 # =========================================================
 
 @app.post("/ask")
-def ask():
+def ask_post():
 
-    data = request.get_json(silent=True)
-
-    if not data:
-        return jsonify({
-            "success": False,
-            "message": "JSON body is required"
-        }), 400
+    data = request.get_json(silent=True) or {}
 
     question = data.get("question")
 
-    if not question:
+    if question is None:
         return jsonify({
             "success": False,
             "message": "question is required"
@@ -87,11 +93,10 @@ def ask():
     if not client:
         return jsonify({
             "success": False,
-            "message": "GEMINI_API_KEY is not configured"
+            "message": "GEMINI_API_KEY is not configured on the server"
         }), 500
 
     try:
-
         interaction = client.interactions.create(
             model="gemini-3.6-flash",
             input=question
