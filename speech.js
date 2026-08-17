@@ -1,151 +1,93 @@
 "use strict";
 
-const input = document.getElementById("question");
-const chat = document.getElementById("chat");
-const status = document.getElementById("status");
-const micButton = document.getElementById("mic");
+document.addEventListener("DOMContentLoaded", function () {
 
-let recognition = null;
-let isListening = false;
+    const input = document.getElementById("question");
+    const status = document.getElementById("status");
+    const micButton = document.getElementById("mic");
 
-
-// =====================================================
-// ADD MESSAGE
-// =====================================================
-
-function addMessage(sender, text, type) {
-
-    if (!chat) {
+    if (!input || !status || !micButton) {
+        console.error("Jarvis speech UI elements not found.");
         return;
     }
 
-    const row =
-        document.createElement("div");
 
-    row.className =
-        "message-row " + type;
+    // =========================================================
+    // BROWSER SPEECH RECOGNITION
+    // =========================================================
 
-
-    const box =
-        document.createElement("div");
-
-    box.className =
-        "message " + type;
+    const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
 
 
-    const senderElement =
-        document.createElement("div");
+    if (!SpeechRecognition) {
 
-    senderElement.className =
-        "sender";
+        console.error(
+            "SpeechRecognition is not supported in this browser."
+        );
 
-    senderElement.textContent =
-        sender;
+        micButton.disabled = true;
+        micButton.textContent = "🚫";
 
-
-    const content =
-        document.createElement("div");
-
-    content.textContent =
-        text;
-
-
-    box.appendChild(
-        senderElement
-    );
-
-    box.appendChild(
-        content
-    );
-
-
-    row.appendChild(
-        box
-    );
-
-
-    chat.appendChild(
-        row
-    );
-
-
-    chat.scrollTop =
-        chat.scrollHeight;
-}
-
-
-// =====================================================
-// STATUS
-// =====================================================
-
-function setStatus(text) {
-
-    if (status) {
         status.textContent =
-            text;
+            "VOICE NOT SUPPORTED";
+
+        return;
     }
-}
 
 
-// =====================================================
-// SPEECH RECOGNITION
-// =====================================================
-
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-
-if (SpeechRecognition) {
-
-    recognition =
+    const recognition =
         new SpeechRecognition();
 
 
-    recognition.lang =
-        "en-IN";
+    // =========================================================
+    // SETTINGS
+    // =========================================================
+
+    recognition.lang = "en-IN";
+
+    recognition.continuous = false;
+
+    recognition.interimResults = false;
+
+    recognition.maxAlternatives = 1;
 
 
-    recognition.continuous =
-        false;
+    let listening = false;
 
 
-    recognition.interimResults =
-        false;
+    // =========================================================
+    // START
+    // =========================================================
+
+    recognition.onstart = function () {
+
+        listening = true;
+
+        micButton.classList.add("listening");
+
+        micButton.textContent = "🛑";
+
+        status.textContent =
+            "🎤 LISTENING...";
+
+        console.log(
+            "Jarvis microphone started."
+        );
+    };
 
 
-    recognition.maxAlternatives =
-        1;
+    // =========================================================
+    // RESULT
+    // =========================================================
 
+    recognition.onresult = function (event) {
 
-    recognition.onstart =
-        function() {
-
-            isListening =
-                true;
-
-
-            micButton.classList.add(
-                "listening"
-            );
-
-
-            micButton.textContent =
-                "🛑";
-
-
-            setStatus(
-                "🎤 LISTENING..."
-            );
-        };
-
-
-    recognition.onresult =
-        function(event) {
+        try {
 
             const result =
                 event.results[0];
-
 
             if (!result) {
                 return;
@@ -157,276 +99,242 @@ if (SpeechRecognition) {
 
 
             console.log(
-                "Speech:",
+                "Recognized:",
                 transcript
             );
 
 
             if (!transcript) {
 
-                setStatus(
-                    "NO SPEECH DETECTED"
-                );
+                status.textContent =
+                    "NO SPEECH DETECTED";
 
                 return;
             }
 
 
+            // =================================================
+            // SPEECH -> TEXT
+            // =================================================
+
             input.value =
                 transcript;
 
 
-            setStatus(
-                "VOICE RECEIVED"
-            );
+            status.textContent =
+                "VOICE → TEXT";
 
+
+            // =================================================
+            // TEXT -> EXISTING JARVIS
+            // =================================================
+
+            /*
+                askGemini() already exists inside app.py's
+                HTML page.
+
+                We call it after speech becomes text.
+            */
 
             if (
                 typeof window.askGemini ===
                 "function"
             ) {
 
-                window.askGemini();
-            }
-        };
+                setTimeout(
+                    function () {
 
+                        window.askGemini();
 
-    recognition.onerror =
-        function(event) {
-
-            console.error(
-                "Speech error:",
-                event.error
-            );
-
-
-            isListening =
-                false;
-
-
-            micButton.classList.remove(
-                "listening"
-            );
-
-
-            micButton.textContent =
-                "🎤";
-
-
-            switch (event.error) {
-
-                case "not-allowed":
-
-                    setStatus(
-                        "MIC PERMISSION DENIED"
-                    );
-
-                    addMessage(
-                        "JARVIS",
-                        "Microphone permission denied. Allow microphone access for this website.",
-                        "ai"
-                    );
-
-                    break;
-
-
-                case "no-speech":
-
-                    setStatus(
-                        "NO SPEECH DETECTED"
-                    );
-
-                    break;
-
-
-                case "audio-capture":
-
-                    setStatus(
-                        "NO MICROPHONE FOUND"
-                    );
-
-                    break;
-
-
-                case "network":
-
-                    setStatus(
-                        "VOICE NETWORK ERROR"
-                    );
-
-                    addMessage(
-                        "JARVIS",
-                        "The browser speech service could not be reached.",
-                        "ai"
-                    );
-
-                    break;
-
-
-                default:
-
-                    setStatus(
-                        "VOICE ERROR: " +
-                        event.error
-                    );
-            }
-        };
-
-
-    recognition.onend =
-        function() {
-
-            isListening =
-                false;
-
-
-            micButton.classList.remove(
-                "listening"
-            );
-
-
-            micButton.textContent =
-                "🎤";
-
-
-            if (
-                status.textContent ===
-                "🎤 LISTENING..."
-            ) {
-
-                setStatus(
-                    "● ONLINE"
+                    },
+                    150
                 );
-            }
-        };
 
+            } else {
 
-} else {
-
-    console.error(
-        "SpeechRecognition not supported."
-    );
-
-
-    micButton.disabled =
-        true;
-
-
-    micButton.textContent =
-        "🚫";
-
-
-    setStatus(
-        "VOICE NOT SUPPORTED"
-    );
-}
-
-
-// =====================================================
-// START LISTENING
-// =====================================================
-
-async function startListening() {
-
-    if (!recognition) {
-
-        addMessage(
-            "JARVIS",
-            "Speech recognition is not supported in this browser. Use Chrome or Edge.",
-            "ai"
-        );
-
-        return;
-    }
-
-
-    if (isListening) {
-
-        recognition.stop();
-
-        return;
-    }
-
-
-    if (
-        !window.isSecureContext
-    ) {
-
-        addMessage(
-            "JARVIS",
-            "Microphone requires HTTPS.",
-            "ai"
-        );
-
-        return;
-    }
-
-
-    /*
-        Ask browser permission first.
-        This also gives us a clear permission error.
-    */
-
-    if (
-        navigator.mediaDevices &&
-        navigator.mediaDevices.getUserMedia
-    ) {
-
-        try {
-
-            const stream =
-                await navigator.mediaDevices.getUserMedia({
-                    audio: true
-                });
-
-
-            stream
-                .getTracks()
-                .forEach(
-                    function(track) {
-                        track.stop();
-                    }
+                console.error(
+                    "askGemini() function not found."
                 );
+
+                status.textContent =
+                    "JARVIS FUNCTION NOT FOUND";
+            }
 
 
         } catch (error) {
 
             console.error(
-                "Microphone permission:",
+                "Speech result error:",
                 error
             );
 
+            status.textContent =
+                "VOICE PROCESSING ERROR";
+        }
+    };
 
-            setStatus(
-                "MIC PERMISSION DENIED"
-            );
+
+    // =========================================================
+    // ERROR
+    // =========================================================
+
+    recognition.onerror = function (event) {
+
+        console.error(
+            "Speech recognition error:",
+            event.error
+        );
 
 
-            addMessage(
-                "JARVIS",
-                "Please allow microphone permission in your browser.",
-                "ai"
-            );
+        listening = false;
 
+        micButton.classList.remove(
+            "listening"
+        );
+
+        micButton.textContent =
+            "🎤";
+
+
+        switch (event.error) {
+
+            case "not-allowed":
+
+                status.textContent =
+                    "MIC PERMISSION DENIED";
+
+                break;
+
+
+            case "no-speech":
+
+                status.textContent =
+                    "NO SPEECH DETECTED";
+
+                break;
+
+
+            case "audio-capture":
+
+                status.textContent =
+                    "MICROPHONE NOT FOUND";
+
+                break;
+
+
+            case "network":
+
+                status.textContent =
+                    "SPEECH NETWORK ERROR";
+
+                break;
+
+
+            case "service-not-allowed":
+
+                status.textContent =
+                    "SPEECH SERVICE BLOCKED";
+
+                break;
+
+
+            case "aborted":
+
+                status.textContent =
+                    "VOICE STOPPED";
+
+                break;
+
+
+            default:
+
+                status.textContent =
+                    "VOICE ERROR";
+        }
+    };
+
+
+    // =========================================================
+    // END
+    // =========================================================
+
+    recognition.onend = function () {
+
+        listening = false;
+
+        micButton.classList.remove(
+            "listening"
+        );
+
+        micButton.textContent =
+            "🎤";
+
+
+        if (
+            status.textContent ===
+                "🎤 LISTENING..." ||
+            status.textContent ===
+                "VOICE → TEXT"
+        ) {
+
+            status.textContent =
+                "● ONLINE";
+        }
+    };
+
+
+    // =========================================================
+    // MICROPHONE BUTTON
+    // =========================================================
+
+    function startListening() {
+
+        if (listening) {
+
+            try {
+
+                recognition.stop();
+
+            } catch (error) {
+
+                console.error(
+                    error
+                );
+            }
 
             return;
+        }
+
+
+        try {
+
+            recognition.start();
+
+        } catch (error) {
+
+            /*
+                Some browsers throw an error when
+                start() is called twice very quickly.
+            */
+
+            console.error(
+                "Speech start error:",
+                error
+            );
         }
     }
 
 
-    try {
+    // =========================================================
+    // GLOBAL FUNCTION
+    // =========================================================
 
-        recognition.start();
-
-    } catch (error) {
-
-        console.error(
-            "Recognition start error:",
-            error
-        );
-    }
-}
+    window.startListening =
+        startListening;
 
 
-window.startListening =
-    startListening;
+    console.log(
+        "Jarvis speech recognition ready."
+    );
+
+});
