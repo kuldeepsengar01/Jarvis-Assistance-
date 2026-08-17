@@ -1,19 +1,13 @@
 import os
+from pathlib import Path
+
 import requests
-
-from flask import (
-    Flask,
-    jsonify,
-    request,
-    render_template_string,
-    Response,
-)
-
 from dotenv import load_dotenv
+from flask import Flask, jsonify, request, render_template_string, Response
 
 
 # =========================================================
-# ENV
+# ENVIRONMENT
 # =========================================================
 
 load_dotenv()
@@ -27,21 +21,20 @@ else:
 
 
 # =========================================================
-# FLASK APP
+# FLASK
 # =========================================================
 
 app = Flask(__name__)
 
 
 # =========================================================
-# HTML UI
+# HTML
 # =========================================================
 
 HTML = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
     <meta charset="UTF-8">
 
     <meta
@@ -57,7 +50,6 @@ HTML = """
     <title>Kuldeep AI</title>
 
     <style>
-
         * {
             box-sizing: border-box;
             margin: 0;
@@ -109,11 +101,13 @@ HTML = """
             border: 1px solid rgba(100, 220, 255, 0.16);
             border-radius: 28px;
 
-            background: rgba(7, 15, 31, 0.90);
+            background: rgba(7, 15, 31, 0.92);
 
             box-shadow:
                 0 30px 100px rgba(0, 0, 0, 0.55),
                 0 0 90px rgba(0, 210, 255, 0.08);
+
+            backdrop-filter: blur(20px);
         }
 
         .header {
@@ -154,7 +148,7 @@ HTML = """
             font-size: 20px;
 
             box-shadow:
-                0 0 30px rgba(54, 217, 255, 0.40);
+                0 0 30px rgba(54, 217, 255, 0.4);
         }
 
         .brand h1 {
@@ -233,7 +227,6 @@ HTML = """
             content: "";
 
             position: absolute;
-
             inset: -12px;
 
             border-radius: 50%;
@@ -247,12 +240,11 @@ HTML = """
             content: "";
 
             position: absolute;
-
             inset: -22px;
 
             border-radius: 50%;
 
-            border: 1px solid rgba(90, 225, 255, 0.10);
+            border: 1px solid rgba(90, 225, 255, 0.1);
 
             border-left-color: rgba(90, 225, 255, 0.65);
 
@@ -351,7 +343,7 @@ HTML = """
         }
 
         .message.ai {
-            background: rgba(17, 30, 54, 0.90);
+            background: rgba(17, 30, 54, 0.9);
 
             border: 1px solid rgba(100, 220, 255, 0.08);
 
@@ -393,7 +385,7 @@ HTML = """
 
             color: #c9efff;
 
-            background: rgba(14, 29, 52, 0.80);
+            background: rgba(14, 29, 52, 0.8);
 
             cursor: pointer;
         }
@@ -403,7 +395,7 @@ HTML = """
 
             border-top: 1px solid rgba(255, 255, 255, 0.06);
 
-            background: rgba(3, 8, 17, 0.80);
+            background: rgba(3, 8, 17, 0.8);
         }
 
         .input-wrap {
@@ -459,7 +451,7 @@ HTML = """
 
             color: white;
 
-            background: rgba(35, 55, 80, 0.90);
+            background: rgba(35, 55, 80, 0.9);
 
             font-size: 18px;
         }
@@ -546,7 +538,7 @@ HTML = """
             }
 
             .composer {
-                padding: 10px 10px;
+                padding: 10px;
             }
 
             input {
@@ -557,9 +549,7 @@ HTML = """
                 min-width: 62px;
             }
         }
-
     </style>
-
 </head>
 
 <body>
@@ -720,7 +710,6 @@ function addMessage(sender, text, type) {
     box.appendChild(content);
 
     row.appendChild(box);
-
     chat.appendChild(row);
 
     chat.scrollTop = chat.scrollHeight;
@@ -735,39 +724,30 @@ function speak(text) {
 
     window.speechSynthesis.cancel();
 
-    const utterance =
-        new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(text);
 
     utterance.lang = "en-IN";
     utterance.rate = 1;
     utterance.pitch = 1;
 
-    window.speechSynthesis.speak(
-        utterance
-    );
+    window.speechSynthesis.speak(utterance);
 }
 
 
 function quickAsk(text) {
-
     input.value = text;
-
     askGemini();
 }
 
 
 async function askGemini() {
 
-    const question =
-        input.value.trim();
+    const question = input.value.trim();
 
     if (!question) {
-
         input.focus();
-
         return;
     }
-
 
     addMessage(
         "YOU",
@@ -775,13 +755,11 @@ async function askGemini() {
         "user"
     );
 
-
     input.value = "";
 
     input.disabled = true;
     sendButton.disabled = true;
     micButton.disabled = true;
-
 
     status.textContent =
         "🧠 JARVIS IS THINKING...";
@@ -795,8 +773,8 @@ async function askGemini() {
                 method: "POST",
 
                 headers: {
-                    "Content-Type":
-                        "application/json"
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
                 },
 
                 body: JSON.stringify({
@@ -806,8 +784,19 @@ async function askGemini() {
         );
 
 
-        const data =
-            await response.json();
+        const raw = await response.text();
+
+        let data;
+
+        try {
+            data = JSON.parse(raw);
+        } catch (parseError) {
+
+            throw new Error(
+                "Server returned non-JSON response: " +
+                raw.slice(0, 250)
+            );
+        }
 
 
         if (!response.ok) {
@@ -832,15 +821,13 @@ async function askGemini() {
 
         addMessage(
             "JARVIS",
-            data.answer,
+            data.answer || "No answer received.",
             "ai"
         );
 
-
         speak(
-            data.answer
+            data.answer || ""
         );
-
 
         status.textContent =
             "● ONLINE";
@@ -849,10 +836,9 @@ async function askGemini() {
     } catch (error) {
 
         console.error(
-            "Gemini error:",
+            "ASK ERROR:",
             error
         );
-
 
         addMessage(
             "JARVIS ERROR",
@@ -860,10 +846,8 @@ async function askGemini() {
             "ai"
         );
 
-
         status.textContent =
             "⚠ REQUEST FAILED";
-
 
     } finally {
 
@@ -889,111 +873,9 @@ input.addEventListener(
     }
 );
 
-
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-let recognition = null;
-
-
-if (SpeechRecognition) {
-
-    recognition = new SpeechRecognition();
-
-    recognition.lang = "en-IN";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-
-    recognition.onstart = function () {
-
-        micButton.classList.add(
-            "listening"
-        );
-
-        micButton.textContent = "🛑";
-
-        status.textContent =
-            "🎤 LISTENING...";
-    };
-
-
-    recognition.onresult = function (event) {
-
-        const text =
-            event.results[0][0].transcript;
-
-        input.value = text;
-
-        askGemini();
-    };
-
-
-    recognition.onerror = function (event) {
-
-        console.error(
-            "Speech error:",
-            event.error
-        );
-
-        micButton.classList.remove(
-            "listening"
-        );
-
-        micButton.textContent = "🎤";
-
-        status.textContent =
-            "VOICE ERROR: " +
-            event.error;
-    };
-
-
-    recognition.onend = function () {
-
-        micButton.classList.remove(
-            "listening"
-        );
-
-        micButton.textContent = "🎤";
-    };
-
-} else {
-
-    micButton.disabled = true;
-    micButton.textContent = "🚫";
-}
-
-
-function startListening() {
-
-    if (!recognition) {
-
-        addMessage(
-            "JARVIS",
-            "Voice recognition is not supported in this browser. Try Chrome.",
-            "ai"
-        );
-
-        return;
-    }
-
-
-    try {
-
-        recognition.start();
-
-    } catch (error) {
-
-        console.error(
-            "Start speech error:",
-            error
-        );
-    }
-}
-
 </script>
+
+<script src="/speech.js"></script>
 
 </body>
 </html>
@@ -1010,6 +892,28 @@ def home():
 
 
 # =========================================================
+# SPEECH.JS
+# =========================================================
+
+@app.get("/speech.js")
+def speech_js():
+
+    js_path = Path(__file__).resolve().parent / "speech.js"
+
+    if not js_path.exists():
+        return Response(
+            "console.error('speech.js file not found');",
+            mimetype="application/javascript",
+            status=404
+        )
+
+    return Response(
+        js_path.read_text(encoding="utf-8"),
+        mimetype="application/javascript"
+    )
+
+
+# =========================================================
 # HEALTH
 # =========================================================
 
@@ -1018,12 +922,12 @@ def health():
 
     return jsonify({
         "status": "ok",
-        "gemini_configured": bool(GEMINI_API_KEY),
+        "gemini_configured": bool(GEMINI_API_KEY)
     })
 
 
 # =========================================================
-# ASK GET
+# ASK - GET
 # =========================================================
 
 @app.get("/ask")
@@ -1031,12 +935,12 @@ def ask_get():
 
     return jsonify({
         "success": True,
-        "message": "Use POST /ask or the web interface.",
+        "message": "Use POST /ask or the web interface."
     })
 
 
 # =========================================================
-# ASK POST
+# ASK - POST
 # =========================================================
 
 @app.post("/ask")
@@ -1053,7 +957,7 @@ def ask():
 
         return jsonify({
             "success": False,
-            "message": "Question is required.",
+            "message": "Question is required."
         }), 400
 
 
@@ -1061,7 +965,7 @@ def ask():
 
         return jsonify({
             "success": False,
-            "message": "GEMINI_API_KEY is not configured.",
+            "message": "GEMINI_API_KEY is not configured."
         }), 500
 
 
@@ -1072,14 +976,14 @@ def ask():
             "/v1/interactions"
         )
 
-
         headers = {
             "x-goog-api-key": GEMINI_API_KEY,
-            "Content-Type": "application/json",
+            "Content-Type": "application/json"
         }
 
 
         question_lower = question.lower()
+
 
         search_terms = [
             "latest",
@@ -1089,7 +993,7 @@ def ask():
             "news",
             "search",
             "who won",
-            "what happened",
+            "what happened"
         ]
 
 
@@ -1101,7 +1005,7 @@ def ask():
 
         payload = {
             "model": "gemini-3.6-flash",
-            "input": question,
+            "input": question
         }
 
 
@@ -1109,27 +1013,25 @@ def ask():
 
             payload["tools"] = [
                 {
-                    "type": "google_search",
+                    "type": "google_search"
                 }
             ]
 
 
-        print(
-            "Sending request to Gemini..."
-        )
+        print("Sending request to Gemini...")
 
 
         response = requests.post(
             url,
             headers=headers,
             json=payload,
-            timeout=90,
+            timeout=90
         )
 
 
         print(
             "Gemini status:",
-            response.status_code,
+            response.status_code
         )
 
 
@@ -1137,15 +1039,14 @@ def ask():
 
             print(
                 "Gemini response:",
-                response.text,
+                response.text
             )
-
 
             return jsonify({
                 "success": False,
                 "message": "Gemini API request failed.",
                 "error": response.text,
-                "status_code": response.status_code,
+                "status_code": response.status_code
             }), 502
 
 
@@ -1154,7 +1055,7 @@ def ask():
 
         answer = result.get(
             "output_text",
-            "",
+            ""
         )
 
 
@@ -1162,37 +1063,34 @@ def ask():
 
             for step in result.get(
                 "steps",
-                [],
+                []
             ):
 
                 if step.get("type") != "model_output":
                     continue
 
-
                 for content in step.get(
                     "content",
-                    [],
+                    []
                 ):
 
                     if content.get("type") == "text":
 
                         answer += content.get(
                             "text",
-                            "",
+                            ""
                         )
 
 
         if not answer:
 
-            answer = (
-                "Gemini returned an empty response."
-            )
+            answer = "Gemini returned an empty response."
 
 
         return jsonify({
             "success": True,
             "question": question,
-            "answer": answer,
+            "answer": answer
         })
 
 
@@ -1200,14 +1098,13 @@ def ask():
 
         print(
             "Network error:",
-            error,
+            error
         )
-
 
         return jsonify({
             "success": False,
             "message": "Could not connect to Gemini.",
-            "error": str(error),
+            "error": str(error)
         }), 502
 
 
@@ -1215,14 +1112,13 @@ def ask():
 
         print(
             "Server error:",
-            error,
+            error
         )
-
 
         return jsonify({
             "success": False,
             "message": "Server error.",
-            "error": str(error),
+            "error": str(error)
         }), 500
 
 
@@ -1235,13 +1131,12 @@ if __name__ == "__main__":
     port = int(
         os.environ.get(
             "PORT",
-            "5000",
+            "5000"
         )
     )
-
 
     app.run(
         host="0.0.0.0",
         port=port,
-        debug=False,
+        debug=False
     )
