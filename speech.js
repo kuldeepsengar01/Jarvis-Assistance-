@@ -31,7 +31,6 @@ function addMessage(sender, text, type) {
     box.appendChild(content);
 
     row.appendChild(box);
-
     chat.appendChild(row);
 
     chat.scrollTop = chat.scrollHeight;
@@ -50,21 +49,18 @@ function speak(text) {
 
     window.speechSynthesis.cancel();
 
-    const utterance =
-        new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(text);
 
     utterance.lang = "en-IN";
     utterance.rate = 1;
     utterance.pitch = 1;
 
-    window.speechSynthesis.speak(
-        utterance
-    );
+    window.speechSynthesis.speak(utterance);
 }
 
 
 // =====================================================
-// BROWSER SPEECH RECOGNITION
+// SPEECH RECOGNITION
 // =====================================================
 
 const SpeechRecognition =
@@ -74,15 +70,11 @@ const SpeechRecognition =
 
 if (SpeechRecognition) {
 
-    recognition =
-        new SpeechRecognition();
+    recognition = new SpeechRecognition();
 
     recognition.lang = "en-IN";
-
     recognition.continuous = false;
-
     recognition.interimResults = false;
-
     recognition.maxAlternatives = 1;
 
 
@@ -90,15 +82,10 @@ if (SpeechRecognition) {
 
         isListening = true;
 
-        micButton.classList.add(
-            "listening"
-        );
-
+        micButton.classList.add("listening");
         micButton.textContent = "🛑";
 
-        status.textContent =
-            "🎤 LISTENING...";
-
+        status.textContent = "🎤 LISTENING...";
     };
 
 
@@ -109,12 +96,9 @@ if (SpeechRecognition) {
 
         input.value = transcript;
 
-        status.textContent =
-            "VOICE RECEIVED";
+        status.textContent = "VOICE RECEIVED";
 
-        // Automatically send
         askGemini();
-
     };
 
 
@@ -127,21 +111,15 @@ if (SpeechRecognition) {
 
         isListening = false;
 
-        micButton.classList.remove(
-            "listening"
-        );
-
+        micButton.classList.remove("listening");
         micButton.textContent = "🎤";
-
 
         if (event.error === "not-allowed") {
 
             status.textContent =
                 "MICROPHONE PERMISSION DENIED";
 
-        } else if (
-            event.error === "no-speech"
-        ) {
+        } else if (event.error === "no-speech") {
 
             status.textContent =
                 "NO SPEECH DETECTED";
@@ -149,10 +127,8 @@ if (SpeechRecognition) {
         } else {
 
             status.textContent =
-                "VOICE ERROR";
-
+                "VOICE ERROR: " + event.error;
         }
-
     };
 
 
@@ -160,10 +136,7 @@ if (SpeechRecognition) {
 
         isListening = false;
 
-        micButton.classList.remove(
-            "listening"
-        );
-
+        micButton.classList.remove("listening");
         micButton.textContent = "🎤";
 
         if (
@@ -173,9 +146,7 @@ if (SpeechRecognition) {
 
             status.textContent =
                 "SECURE • AI ONLINE • READY";
-
         }
-
     };
 
 } else {
@@ -185,13 +156,9 @@ if (SpeechRecognition) {
     );
 
     micButton.disabled = true;
+    micButton.textContent = "🚫";
 
-    micButton.textContent =
-        "🚫";
-
-    status.textContent =
-        "VOICE NOT SUPPORTED";
-
+    status.textContent = "VOICE NOT SUPPORTED";
 }
 
 
@@ -205,7 +172,7 @@ function startListening() {
 
         addMessage(
             "JARVIS",
-            "Speech recognition is not supported by this browser. Try Chrome or Edge.",
+            "Speech recognition is not supported. Try Chrome or Edge.",
             "ai"
         );
 
@@ -218,7 +185,6 @@ function startListening() {
         recognition.stop();
 
         return;
-
     }
 
 
@@ -228,10 +194,12 @@ function startListening() {
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Speech start error:",
+            error
+        );
 
     }
-
 }
 
 
@@ -241,8 +209,7 @@ function startListening() {
 
 async function askGemini() {
 
-    const question =
-        input.value.trim();
+    const question = input.value.trim();
 
 
     if (!question) {
@@ -250,7 +217,6 @@ async function askGemini() {
         input.focus();
 
         return;
-
     }
 
 
@@ -263,11 +229,8 @@ async function askGemini() {
 
     input.value = "";
 
-
     sendButton.disabled = true;
-
     micButton.disabled = true;
-
 
     status.textContent =
         "🧠 JARVIS IS THINKING...";
@@ -275,59 +238,110 @@ async function askGemini() {
 
     try {
 
-        const response =
-            await fetch(
-                "/ask",
-                {
-                    method: "POST",
+        const response = await fetch(
+            "/ask",
+            {
+                method: "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
 
-                    body:
-                        JSON.stringify({
-                            question:
-                                question
-                        })
-                }
+                body: JSON.stringify({
+                    question: question
+                })
+            }
+        );
+
+
+        // ---------------------------------------------
+        // SAFE RESPONSE PARSING
+        // ---------------------------------------------
+
+        const contentType =
+            response.headers.get("content-type") || "";
+
+        const raw =
+            await response.text();
+
+
+        let data;
+
+
+        if (
+            contentType.includes(
+                "application/json"
+            )
+        ) {
+
+            try {
+
+                data = JSON.parse(raw);
+
+            } catch (parseError) {
+
+                throw new Error(
+                    "Server returned invalid JSON."
+                );
+            }
+
+        } else {
+
+            // Render/Flask returned HTML or plain text
+
+            console.error(
+                "Non-JSON server response:",
+                raw
             );
 
+            throw new Error(
+                `Server returned ${response.status}: ${raw.slice(0, 300)}`
+            );
+        }
 
-        const data =
-            await response.json();
 
+        // ---------------------------------------------
+        // HTTP ERROR
+        // ---------------------------------------------
 
         if (!response.ok) {
 
             throw new Error(
+                data.error ||
                 data.message ||
-                "Server request failed"
+                `HTTP ${response.status}`
             );
-
         }
 
+
+        // ---------------------------------------------
+        // APPLICATION ERROR
+        // ---------------------------------------------
 
         if (!data.success) {
 
             throw new Error(
+                data.error ||
                 data.message ||
                 "Gemini request failed"
             );
-
         }
 
 
+        // ---------------------------------------------
+        // SUCCESS
+        // ---------------------------------------------
+
         addMessage(
             "JARVIS",
-            data.answer,
+            data.answer || "No answer received.",
             "ai"
         );
 
 
         speak(
-            data.answer
+            data.answer || ""
         );
 
 
@@ -338,13 +352,13 @@ async function askGemini() {
     } catch (error) {
 
         console.error(
-            "Ask error:",
+            "ASK ERROR:",
             error
         );
 
 
         addMessage(
-            "JARVIS",
+            "JARVIS ERROR",
             error.message ||
             "Unable to connect to Jarvis.",
             "ai"
@@ -363,9 +377,7 @@ async function askGemini() {
             !recognition;
 
         input.focus();
-
     }
-
 }
 
 
@@ -384,19 +396,14 @@ input.addEventListener(
             event.preventDefault();
 
             askGemini();
-
         }
-
     }
 );
 
 
 // =====================================================
-// GLOBAL FUNCTIONS
+// GLOBAL
 // =====================================================
 
-window.askGemini =
-    askGemini;
-
-window.startListening =
-    startListening;
+window.askGemini = askGemini;
+window.startListening = startListening;
