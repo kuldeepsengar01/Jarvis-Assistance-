@@ -1,12 +1,19 @@
 import os
 import requests
 
-from flask import Flask, request, jsonify, render_template_string, Response
+from flask import (
+    Flask,
+    jsonify,
+    request,
+    render_template_string,
+    Response,
+)
+
 from dotenv import load_dotenv
 
 
 # =========================================================
-# ENVIRONMENT
+# ENV
 # =========================================================
 
 load_dotenv()
@@ -20,20 +27,19 @@ else:
 
 
 # =========================================================
-# FLASK
+# FLASK APP
 # =========================================================
 
 app = Flask(__name__)
 
 
 # =========================================================
-# HTML
+# HTML UI
 # =========================================================
 
-HTML = r"""
+HTML = """
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 
     <meta charset="UTF-8">
@@ -50,7 +56,6 @@ HTML = r"""
 
     <title>Kuldeep AI</title>
 
-
     <style>
 
         * {
@@ -61,7 +66,7 @@ HTML = r"""
 
         body {
             min-height: 100vh;
-            font-family: Arial, sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             color: white;
 
             background:
@@ -101,13 +106,10 @@ HTML = r"""
 
             overflow: hidden;
 
+            border: 1px solid rgba(100, 220, 255, 0.16);
             border-radius: 28px;
 
-            border:
-                1px solid rgba(100, 220, 255, 0.16);
-
-            background:
-                rgba(7, 15, 31, 0.90);
+            background: rgba(7, 15, 31, 0.90);
 
             box-shadow:
                 0 30px 100px rgba(0, 0, 0, 0.55),
@@ -116,13 +118,12 @@ HTML = r"""
 
         .header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
 
             padding: 18px 22px;
 
-            border-bottom:
-                1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .brand {
@@ -140,8 +141,6 @@ HTML = r"""
 
             border-radius: 15px;
 
-            font-size: 20px;
-
             background:
                 radial-gradient(
                     circle,
@@ -152,6 +151,7 @@ HTML = r"""
                 );
 
             color: #00151c;
+            font-size: 20px;
 
             box-shadow:
                 0 0 30px rgba(54, 217, 255, 0.40);
@@ -164,11 +164,9 @@ HTML = r"""
 
         .brand p {
             margin-top: 3px;
-
+            color: #7c96ae;
             font-size: 9px;
             letter-spacing: 1.5px;
-
-            color: #7c96ae;
         }
 
         .online {
@@ -181,9 +179,7 @@ HTML = r"""
             border-radius: 999px;
 
             color: #67efaf;
-
-            background:
-                rgba(70, 255, 170, 0.07);
+            background: rgba(70, 255, 170, 0.07);
 
             font-size: 10px;
         }
@@ -237,12 +233,12 @@ HTML = r"""
             content: "";
 
             position: absolute;
+
             inset: -12px;
 
             border-radius: 50%;
 
-            border:
-                1px solid rgba(90, 225, 255, 0.35);
+            border: 1px solid rgba(90, 225, 255, 0.35);
 
             animation: spin 8s linear infinite;
         }
@@ -251,18 +247,16 @@ HTML = r"""
             content: "";
 
             position: absolute;
+
             inset: -22px;
 
             border-radius: 50%;
 
-            border:
-                1px solid rgba(90, 225, 255, 0.10);
+            border: 1px solid rgba(90, 225, 255, 0.10);
 
-            border-left-color:
-                rgba(90, 225, 255, 0.65);
+            border-left-color: rgba(90, 225, 255, 0.65);
 
-            animation:
-                spinReverse 12s linear infinite;
+            animation: spinReverse 12s linear infinite;
         }
 
         .orb-core {
@@ -273,12 +267,12 @@ HTML = r"""
 
             background: white;
 
-            box-shadow:
-                0 0 30px white;
+            box-shadow: 0 0 30px white;
         }
 
         @keyframes pulse {
-            0%, 100% {
+            0%,
+            100% {
                 transform: scale(1);
             }
 
@@ -357,12 +351,9 @@ HTML = r"""
         }
 
         .message.ai {
-            background:
-                rgba(17, 30, 54, 0.90);
+            background: rgba(17, 30, 54, 0.90);
 
-            border:
-                1px solid
-                rgba(100, 220, 255, 0.08);
+            border: 1px solid rgba(100, 220, 255, 0.08);
 
             border-bottom-left-radius: 5px;
         }
@@ -379,6 +370,7 @@ HTML = r"""
 
         .quick {
             display: flex;
+
             gap: 8px;
 
             overflow-x: auto;
@@ -386,21 +378,22 @@ HTML = r"""
             padding: 0 22px 12px;
         }
 
+        .quick::-webkit-scrollbar {
+            display: none;
+        }
+
         .quick button {
             flex: 0 0 auto;
 
-            border:
-                1px solid
-                rgba(80, 210, 255, 0.12);
+            padding: 9px 14px;
 
             border-radius: 999px;
 
-            padding: 9px 14px;
+            border: 1px solid rgba(80, 210, 255, 0.12);
 
             color: #c9efff;
 
-            background:
-                rgba(14, 29, 52, 0.80);
+            background: rgba(14, 29, 52, 0.80);
 
             cursor: pointer;
         }
@@ -408,12 +401,9 @@ HTML = r"""
         .composer {
             padding: 12px 18px 15px;
 
-            border-top:
-                1px solid
-                rgba(255, 255, 255, 0.06);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
 
-            background:
-                rgba(3, 8, 17, 0.80);
+            background: rgba(3, 8, 17, 0.80);
         }
 
         .input-wrap {
@@ -426,12 +416,9 @@ HTML = r"""
 
             border-radius: 18px;
 
-            border:
-                1px solid
-                rgba(80, 210, 255, 0.14);
+            border: 1px solid rgba(80, 210, 255, 0.14);
 
-            background:
-                rgba(11, 22, 40, 0.96);
+            background: rgba(11, 22, 40, 0.96);
         }
 
         input {
@@ -472,8 +459,7 @@ HTML = r"""
 
             color: white;
 
-            background:
-                rgba(35, 55, 80, 0.90);
+            background: rgba(35, 55, 80, 0.90);
 
             font-size: 18px;
         }
@@ -482,8 +468,7 @@ HTML = r"""
             background: #ef4444;
 
             box-shadow:
-                0 0 25px
-                rgba(239, 68, 68, 0.45);
+                0 0 25px rgba(239, 68, 68, 0.45);
         }
 
         .send {
@@ -548,8 +533,7 @@ HTML = r"""
             }
 
             .chat {
-                padding:
-                    10px 15px 16px;
+                padding: 10px 15px 16px;
             }
 
             .message {
@@ -558,19 +542,11 @@ HTML = r"""
             }
 
             .quick {
-                padding:
-                    0 15px 11px;
+                padding: 0 15px 11px;
             }
 
             .composer {
-                padding:
-                    10px 10px
-                    max(
-                        10px,
-                        env(
-                            safe-area-inset-bottom
-                        )
-                    );
+                padding: 10px 10px;
             }
 
             input {
@@ -586,227 +562,168 @@ HTML = r"""
 
 </head>
 
-
 <body>
 
 <div class="app">
 
-<main class="shell">
+    <main class="shell">
+
+        <header class="header">
+
+            <div class="brand">
+
+                <div class="logo">
+                    ◉
+                </div>
+
+                <div>
+                    <h1>KULDEEP AI</h1>
+                    <p>GEMINI INTELLIGENCE</p>
+                </div>
+
+            </div>
+
+            <div class="online">
+                <span class="online-dot"></span>
+                ONLINE
+            </div>
+
+        </header>
 
 
-<header class="header">
+        <section class="hero">
 
-<div class="brand">
+            <div class="orb">
+                <div class="orb-core"></div>
+            </div>
 
-<div class="logo">
-    ◉
-</div>
+            <div class="hero-title">
+                JARVIS IS READY
+            </div>
 
-<div>
-
-<h1>KULDEEP AI</h1>
-
-<p>
-    GEMINI INTELLIGENCE
-</p>
-
-</div>
-
-</div>
+        </section>
 
 
-<div class="online">
+        <section class="chat" id="chat">
 
-<span class="online-dot"></span>
+            <div class="message-row ai">
 
-ONLINE
+                <div class="message ai">
 
-</div>
+                    <div class="sender">
+                        JARVIS
+                    </div>
 
-</header>
+                    Hello Kuldeep 👋
+                    Ask me anything.
 
+                </div>
 
-<section class="hero">
+            </div>
 
-<div class="orb">
-
-<div class="orb-core"></div>
-
-</div>
-
-<div class="hero-title">
-    JARVIS IS READY
-</div>
-
-</section>
+        </section>
 
 
-<section class="chat" id="chat">
+        <div class="quick">
 
-<div class="message-row ai">
+            <button onclick="quickAsk('What is Python?')">
+                🐍 Python
+            </button>
 
-<div class="message ai">
+            <button onclick="quickAsk('Explain Artificial Intelligence')">
+                🤖 AI
+            </button>
 
-<div class="sender">
-    JARVIS
-</div>
+            <button onclick="quickAsk('What is React?')">
+                ⚛ React
+            </button>
 
-Hello Kuldeep 👋
-Ask me anything.
+            <button onclick="quickAsk('Explain JavaScript')">
+                JS
+            </button>
 
-</div>
+            <button onclick="quickAsk('Give me a programming tip')">
+                💡 Tip
+            </button>
 
-</div>
-
-</section>
-
-
-<div class="quick">
-
-<button onclick="quickAsk('What is Python?')">
-    🐍 Python
-</button>
-
-<button onclick="quickAsk('Explain Artificial Intelligence')">
-    🤖 AI
-</button>
-
-<button onclick="quickAsk('What is React?')">
-    ⚛ React
-</button>
-
-<button onclick="quickAsk('Explain JavaScript')">
-    JS
-</button>
-
-<button onclick="quickAsk('Give me a programming tip')">
-    💡 Tip
-</button>
-
-</div>
+        </div>
 
 
-<footer class="composer">
+        <footer class="composer">
 
-<div class="input-wrap">
+            <div class="input-wrap">
 
-<input
-    id="question"
-    type="text"
-    autocomplete="off"
-    placeholder="Ask Jarvis anything..."
->
+                <input
+                    id="question"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Ask Jarvis anything..."
+                >
 
+                <button
+                    class="mic"
+                    id="mic"
+                    onclick="startListening()"
+                >
+                    🎤
+                </button>
 
-<button
-    class="mic"
-    id="mic"
-    onclick="startListening()"
->
-    🎤
-</button>
+                <button
+                    class="send"
+                    id="send"
+                    onclick="askGemini()"
+                >
+                    ASK
+                </button>
 
+            </div>
 
-<button
-    class="send"
-    id="send"
-    onclick="askGemini()"
->
-    ASK
-</button>
+            <div
+                class="status"
+                id="status"
+            >
+                ● SECURE • AI ONLINE • READY
+            </div>
 
-</div>
+        </footer>
 
-
-<div
-    class="status"
-    id="status"
->
-● SECURE • AI ONLINE • READY
-</div>
-
-</footer>
-
-
-</main>
+    </main>
 
 </div>
 
 
 <script>
 
-const input =
-    document.getElementById("question");
-
-const chat =
-    document.getElementById("chat");
-
-const micButton =
-    document.getElementById("mic");
-
-const sendButton =
-    document.getElementById("send");
-
-const status =
-    document.getElementById("status");
+const input = document.getElementById("question");
+const chat = document.getElementById("chat");
+const micButton = document.getElementById("mic");
+const sendButton = document.getElementById("send");
+const status = document.getElementById("status");
 
 
-function addMessage(
-    sender,
-    text,
-    type
-) {
+function addMessage(sender, text, type) {
 
-    const row =
-        document.createElement("div");
+    const row = document.createElement("div");
+    row.className = "message-row " + type;
 
-    row.className =
-        "message-row " + type;
+    const box = document.createElement("div");
+    box.className = "message " + type;
 
+    const senderElement = document.createElement("div");
+    senderElement.className = "sender";
+    senderElement.textContent = sender;
 
-    const box =
-        document.createElement("div");
+    const content = document.createElement("div");
+    content.textContent = text;
 
-    box.className =
-        "message " + type;
+    box.appendChild(senderElement);
+    box.appendChild(content);
 
+    row.appendChild(box);
 
-    const senderElement =
-        document.createElement("div");
+    chat.appendChild(row);
 
-    senderElement.className =
-        "sender";
-
-    senderElement.textContent =
-        sender;
-
-
-    const content =
-        document.createElement("div");
-
-    content.textContent =
-        text;
-
-
-    box.appendChild(
-        senderElement
-    );
-
-    box.appendChild(
-        content
-    );
-
-    row.appendChild(
-        box
-    );
-
-    chat.appendChild(
-        row
-    );
-
-
-    chat.scrollTop =
-        chat.scrollHeight;
+    chat.scrollTop = chat.scrollHeight;
 }
 
 
@@ -821,14 +738,9 @@ function speak(text) {
     const utterance =
         new SpeechSynthesisUtterance(text);
 
-    utterance.lang =
-        "en-IN";
-
-    utterance.rate =
-        1;
-
-    utterance.pitch =
-        1;
+    utterance.lang = "en-IN";
+    utterance.rate = 1;
+    utterance.pitch = 1;
 
     window.speechSynthesis.speak(
         utterance
@@ -849,9 +761,10 @@ async function askGemini() {
     const question =
         input.value.trim();
 
-
     if (!question) {
+
         input.focus();
+
         return;
     }
 
@@ -866,9 +779,7 @@ async function askGemini() {
     input.value = "";
 
     input.disabled = true;
-
     sendButton.disabled = true;
-
     micButton.disabled = true;
 
 
@@ -878,24 +789,21 @@ async function askGemini() {
 
     try {
 
-        const response =
-            await fetch(
-                "/ask",
-                {
-                    method: "POST",
+        const response = await fetch(
+            "/ask",
+            {
+                method: "POST",
 
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
 
-                    body:
-                        JSON.stringify({
-                            question:
-                                question
-                        })
-                }
-            );
+                body: JSON.stringify({
+                    question: question
+                })
+            }
+        );
 
 
         const data =
@@ -907,9 +815,8 @@ async function askGemini() {
             throw new Error(
                 data.error ||
                 data.message ||
-                `HTTP ${response.status}`
+                ("HTTP " + response.status)
             );
-
         }
 
 
@@ -920,7 +827,6 @@ async function askGemini() {
                 data.message ||
                 "Gemini request failed."
             );
-
         }
 
 
@@ -958,126 +864,107 @@ async function askGemini() {
         status.textContent =
             "⚠ REQUEST FAILED";
 
+
     } finally {
 
         input.disabled = false;
-
         sendButton.disabled = false;
-
         micButton.disabled = false;
 
         input.focus();
-
     }
 }
 
 
-// =====================================================
-// BROWSER SPEECH RECOGNITION
-// =====================================================
+input.addEventListener(
+    "keydown",
+    function (event) {
+
+        if (event.key === "Enter") {
+
+            event.preventDefault();
+
+            askGemini();
+        }
+    }
+);
+
 
 const SpeechRecognition =
     window.SpeechRecognition ||
     window.webkitSpeechRecognition;
-
 
 let recognition = null;
 
 
 if (SpeechRecognition) {
 
-    recognition =
-        new SpeechRecognition();
+    recognition = new SpeechRecognition();
 
-    recognition.lang =
-        "en-IN";
-
-    recognition.continuous =
-        false;
-
-    recognition.interimResults =
-        false;
+    recognition.lang = "en-IN";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
 
 
-    recognition.onstart =
-        function () {
+    recognition.onstart = function () {
 
-            micButton.classList.add(
-                "listening"
-            );
+        micButton.classList.add(
+            "listening"
+        );
 
-            micButton.textContent =
-                "🛑";
+        micButton.textContent = "🛑";
 
-            status.textContent =
-                "🎤 LISTENING...";
-
-        };
+        status.textContent =
+            "🎤 LISTENING...";
+    };
 
 
-    recognition.onresult =
-        function (event) {
+    recognition.onresult = function (event) {
 
-            const text =
-                event.results[0][0]
-                    .transcript;
+        const text =
+            event.results[0][0].transcript;
 
-            input.value =
-                text;
+        input.value = text;
 
-            askGemini();
-
-        };
+        askGemini();
+    };
 
 
-    recognition.onerror =
-        function (event) {
+    recognition.onerror = function (event) {
 
-            console.error(
-                "Speech error:",
-                event.error
-            );
+        console.error(
+            "Speech error:",
+            event.error
+        );
 
-            micButton.classList.remove(
-                "listening"
-            );
+        micButton.classList.remove(
+            "listening"
+        );
 
-            micButton.textContent =
-                "🎤";
+        micButton.textContent = "🎤";
 
-            status.textContent =
-                "VOICE ERROR: " +
-                event.error;
-
-        };
+        status.textContent =
+            "VOICE ERROR: " +
+            event.error;
+    };
 
 
-    recognition.onend =
-        function () {
+    recognition.onend = function () {
 
-            micButton.classList.remove(
-                "listening"
-            );
+        micButton.classList.remove(
+            "listening"
+        );
 
-            micButton.textContent =
-                "🎤";
-
-        };
+        micButton.textContent = "🎤";
+    };
 
 } else {
 
-    micButton.disabled =
-        true;
-
-    micButton.textContent =
-        "🚫";
-
+    micButton.disabled = true;
+    micButton.textContent = "🚫";
 }
 
-
-// =====================================================
-// START VOICE
-// =====================================================
 
 function startListening() {
 
@@ -1100,18 +987,15 @@ function startListening() {
     } catch (error) {
 
         console.error(
+            "Start speech error:",
             error
         );
-
     }
-
 }
 
 </script>
 
-
 </body>
-
 </html>
 """
 
@@ -1122,10 +1006,7 @@ function startListening() {
 
 @app.get("/")
 def home():
-
-    return render_template_string(
-        HTML
-    )
+    return render_template_string(HTML)
 
 
 # =========================================================
@@ -1137,30 +1018,34 @@ def health():
 
     return jsonify({
         "status": "ok",
-        "gemini_configured":
-            bool(GEMINI_API_KEY)
+        "gemini_configured": bool(GEMINI_API_KEY),
     })
 
 
 # =========================================================
-# GEMINI ASK
+# ASK GET
+# =========================================================
+
+@app.get("/ask")
+def ask_get():
+
+    return jsonify({
+        "success": True,
+        "message": "Use POST /ask or the web interface.",
+    })
+
+
+# =========================================================
+# ASK POST
 # =========================================================
 
 @app.post("/ask")
 def ask():
 
-    data = (
-        request.get_json(
-            silent=True
-        )
-        or {}
-    )
+    data = request.get_json(silent=True) or {}
 
     question = str(
-        data.get(
-            "question",
-            ""
-        )
+        data.get("question", "")
     ).strip()
 
 
@@ -1168,8 +1053,7 @@ def ask():
 
         return jsonify({
             "success": False,
-            "message":
-                "Question is required."
+            "message": "Question is required.",
         }), 400
 
 
@@ -1177,8 +1061,7 @@ def ask():
 
         return jsonify({
             "success": False,
-            "message":
-                "GEMINI_API_KEY is not configured."
+            "message": "GEMINI_API_KEY is not configured.",
         }), 500
 
 
@@ -1191,16 +1074,12 @@ def ask():
 
 
         headers = {
-            "x-goog-api-key":
-                GEMINI_API_KEY,
-
-            "Content-Type":
-                "application/json"
+            "x-goog-api-key": GEMINI_API_KEY,
+            "Content-Type": "application/json",
         }
 
 
-        # Search is enabled for questions
-        # that clearly need current information.
+        question_lower = question.lower()
 
         search_terms = [
             "latest",
@@ -1210,23 +1089,19 @@ def ask():
             "news",
             "search",
             "who won",
-            "what happened"
+            "what happened",
         ]
 
 
         use_search = any(
-            term in question.lower()
+            term in question_lower
             for term in search_terms
         )
 
 
         payload = {
-
-            "model":
-                "gemini-3.6-flash",
-
-            "input":
-                question
+            "model": "gemini-3.6-flash",
+            "input": question,
         }
 
 
@@ -1234,8 +1109,7 @@ def ask():
 
             payload["tools"] = [
                 {
-                    "type":
-                        "google_search"
+                    "type": "google_search",
                 }
             ]
 
@@ -1249,13 +1123,13 @@ def ask():
             url,
             headers=headers,
             json=payload,
-            timeout=90
+            timeout=90,
         )
 
 
         print(
             "Gemini status:",
-            response.status_code
+            response.status_code,
         )
 
 
@@ -1263,69 +1137,49 @@ def ask():
 
             print(
                 "Gemini response:",
-                response.text
+                response.text,
             )
 
 
             return jsonify({
-
-                "success":
-                    False,
-
-                "message":
-                    "Gemini API request failed.",
-
-                "error":
-                    response.text,
-
-                "status_code":
-                    response.status_code
-
+                "success": False,
+                "message": "Gemini API request failed.",
+                "error": response.text,
+                "status_code": response.status_code,
             }), 502
 
 
-        result =
-            response.json()
+        result = response.json()
 
 
-        answer = (
-            result.get(
-                "output_text"
-            )
-            or ""
+        answer = result.get(
+            "output_text",
+            "",
         )
 
-
-        # Fallback for structured steps.
 
         if not answer:
 
             for step in result.get(
                 "steps",
-                []
+                [],
             ):
 
-                if (
-                    step.get("type")
-                    == "model_output"
+                if step.get("type") != "model_output":
+                    continue
+
+
+                for content in step.get(
+                    "content",
+                    [],
                 ):
 
-                    for content in step.get(
-                        "content",
-                        []
-                    ):
+                    if content.get("type") == "text":
 
-                        if (
-                            content.get("type")
-                            == "text"
-                        ):
-
-                            answer += (
-                                content.get(
-                                    "text",
-                                    ""
-                                )
-                            )
+                        answer += content.get(
+                            "text",
+                            "",
+                        )
 
 
         if not answer:
@@ -1336,16 +1190,9 @@ def ask():
 
 
         return jsonify({
-
-            "success":
-                True,
-
-            "question":
-                question,
-
-            "answer":
-                answer
-
+            "success": True,
+            "question": question,
+            "answer": answer,
         })
 
 
@@ -1353,21 +1200,14 @@ def ask():
 
         print(
             "Network error:",
-            error
+            error,
         )
 
 
         return jsonify({
-
-            "success":
-                False,
-
-            "message":
-                "Could not connect to Gemini.",
-
-            "error":
-                str(error)
-
+            "success": False,
+            "message": "Could not connect to Gemini.",
+            "error": str(error),
         }), 502
 
 
@@ -1375,21 +1215,14 @@ def ask():
 
         print(
             "Server error:",
-            error
+            error,
         )
 
 
         return jsonify({
-
-            "success":
-                False,
-
-            "message":
-                "Server error.",
-
-            "error":
-                str(error)
-
+            "success": False,
+            "message": "Server error.",
+            "error": str(error),
         }), 500
 
 
@@ -1402,12 +1235,13 @@ if __name__ == "__main__":
     port = int(
         os.environ.get(
             "PORT",
-            "5000"
+            "5000",
         )
     )
+
 
     app.run(
         host="0.0.0.0",
         port=port,
-        debug=False
+        debug=False,
     )
