@@ -11,18 +11,18 @@ from google import genai
 
 load_dotenv()
 
-API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if not API_KEY:
+if GEMINI_API_KEY:
+    print("Gemini API key loaded successfully.")
+    client = genai.Client(api_key=GEMINI_API_KEY)
+else:
     print("WARNING: GEMINI_API_KEY is not configured.")
     client = None
-else:
-    print("Gemini API key loaded.")
-    client = genai.Client(api_key=API_KEY)
 
 
 # =========================================================
-# FLASK APP
+# FLASK
 # =========================================================
 
 app = Flask(__name__)
@@ -42,14 +42,14 @@ def home():
 
 
 # =========================================================
-# HEALTH CHECK
+# HEALTH
 # =========================================================
 
 @app.get("/health")
 def health():
     return jsonify({
         "status": "ok",
-        "gemini": client is not None
+        "gemini_configured": client is not None
     })
 
 
@@ -58,22 +58,36 @@ def health():
 # =========================================================
 
 @app.post("/ask")
-def ask_gemini():
+def ask():
 
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
 
-    question = data.get("question", "").strip()
+    if not data:
+        return jsonify({
+            "success": False,
+            "message": "JSON body is required"
+        }), 400
+
+    question = data.get("question")
 
     if not question:
         return jsonify({
             "success": False,
-            "message": "Question is required"
+            "message": "question is required"
+        }), 400
+
+    question = str(question).strip()
+
+    if not question:
+        return jsonify({
+            "success": False,
+            "message": "question cannot be empty"
         }), 400
 
     if not client:
         return jsonify({
             "success": False,
-            "message": "GEMINI_API_KEY is not configured on the server"
+            "message": "GEMINI_API_KEY is not configured"
         }), 500
 
     try:
@@ -103,7 +117,7 @@ def ask_gemini():
 
 
 # =========================================================
-# START SERVER
+# SERVER
 # =========================================================
 
 if __name__ == "__main__":
